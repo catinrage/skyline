@@ -6,8 +6,12 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
-import { spawnSync } from 'node:child_process';
-import readline from 'node:readline/promises';
+import { spawn, spawnSync } from 'node:child_process';
+import chalk from 'chalk';
+import ora from 'ora';
+import enquirer from 'enquirer';
+
+const { Select, Password, Input, Confirm } = enquirer;
 
 const scrypt = promisify(scryptCallback);
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -29,6 +33,168 @@ const reservedPanelBasePaths = new Set([
 	'user',
 	'_app'
 ]);
+
+/* -------------------------------------------------------------------------- */
+/* Theme & presentation helpers                                               */
+/* -------------------------------------------------------------------------- */
+
+const theme = {
+	brand: chalk.hex('#38bdf8'),
+	brandBold: chalk.hex('#38bdf8').bold,
+	accent: chalk.hex('#a78bfa'),
+	success: chalk.hex('#34d399'),
+	error: chalk.hex('#f87171'),
+	warn: chalk.hex('#fbbf24'),
+	info: chalk.hex('#60a5fa'),
+	muted: chalk.hex('#94a3b8'),
+	value: chalk.whiteBright,
+	dim: chalk.dim,
+	bold: chalk.bold
+};
+
+const ansiPattern = /\[[0-9;]*m/g;
+
+function visibleLength(value) {
+	return String(value).replace(ansiPattern, '').length;
+}
+
+function padEndVisible(value, width) {
+	const str = String(value);
+	return str + ' '.repeat(Math.max(0, width - visibleLength(str)));
+}
+
+function ok(message) {
+	console.log(`${theme.success('✓')} ${message}`);
+}
+
+function fail(message) {
+	console.log(`${theme.error('✗')} ${message}`);
+}
+
+function info(message) {
+	console.log(`${theme.info('ℹ')} ${message}`);
+}
+
+function warn(message) {
+	console.log(`${theme.warn('⚠')} ${message}`);
+}
+
+function box(lines, { title = '', color = theme.brand } = {}) {
+	const padding = 1;
+	const titleLen = title ? visibleLength(title) : 0;
+	const inner = Math.max(0, ...lines.map(visibleLength), title ? titleLen + 2 : 0) + padding * 2;
+	const top = title
+		? color('╭─ ') +
+			theme.brandBold(title) +
+			color(' ' + '─'.repeat(Math.max(1, inner - titleLen - 3)) + '╮')
+		: color('╭' + '─'.repeat(inner) + '╮');
+	const bottom = color('╰' + '─'.repeat(inner) + '╯');
+	const body = lines.map((line) => {
+		const content = ' '.repeat(padding) + line + ' '.repeat(inner - padding - visibleLength(line));
+		return color('│') + content + color('│');
+	});
+	console.log([top, ...body, bottom].join('\n'));
+}
+
+function section(title) {
+	console.log();
+	console.log(theme.brandBold(`▌ ${title}`));
+	console.log(theme.dim('─'.repeat(visibleLength(title) + 2)));
+}
+
+function kv(pairs) {
+	const labelWidth = Math.max(...pairs.map(([key]) => visibleLength(key)));
+	for (const [key, value] of pairs) {
+		console.log(`  ${theme.muted(padEndVisible(key, labelWidth))}   ${value}`);
+	}
+}
+
+function table(headers, rows) {
+	const widths = headers.map((header, index) =>
+		Math.max(visibleLength(header), ...rows.map((row) => visibleLength(row[index] ?? '')), 0)
+	);
+	const gap = '   ';
+	const headerLine = headers
+		.map((header, index) => theme.brandBold(padEndVisible(header, widths[index])))
+		.join(gap);
+	const totalWidth =
+		widths.reduce((sum, width) => sum + width, 0) + gap.length * (headers.length - 1);
+	console.log(headerLine);
+	console.log(theme.dim('─'.repeat(totalWidth)));
+	for (const row of rows) {
+		console.log(row.map((cell, index) => padEndVisible(cell ?? '', widths[index])).join(gap));
+	}
+}
+
+function readVersion() {
+	try {
+		const pkg = JSON.parse(readFileSync(resolve(projectRoot, 'package.json'), 'utf8'));
+		return pkg.version ?? 'unknown';
+	} catch {
+		return 'unknown';
+	}
+}
+
+function header() {
+	box(
+		[
+			theme.muted('Server manager  ') + theme.brand('v' + readVersion()),
+			theme.muted('Service   ') + theme.value(serviceName),
+			theme.muted('Database  ') + theme.value(databasePath)
+		],
+		{ title: '✦ SKYLINE' }
+	);
+}
+
+async function withSpinner(text, task, successText) {
+	const spinner = ora({ text, spinner: 'dots', color: 'cyan' }).start();
+	try {
+		const result = await task();
+		spinner.succeed(successText ?? text);
+		return result;
+	} catch (error) {
+		spinner.fail(theme.error(error instanceof Error ? error.message : String(error)));
+		if (error && error.output) console.log(theme.dim(String(error.output).trim()));
+		throw error;
+	}
+}
+
+/* -------------------------------------------------------------------------- */
+/* Interactive prompts (enquirer)                                             */
+/* -------------------------------------------------------------------------- */
+
+function ensureTty() {
+	if (!process.stdin.isTTY) {
+		throw new Error(
+			'This action needs an interactive terminal. Pass the value as an argument instead.'
+		);
+	}
+}
+
+async function askText(message, { validate } = {}) {
+	ensureTty();
+	const answer = await new Input({ message, validate }).run();
+	return answer.trim();
+}
+
+async function askSecret(message) {
+	ensureTty();
+	return await new Password({ message }).run();
+}
+
+async function askConfirm(message, initial = false) {
+	ensureTty();
+	return await new Confirm({ message, initial }).run();
+}
+
+async function askSelect(message, choices) {
+	ensureTty();
+	return await new Select({ message, choices }).run();
+}
+
+/* -------------------------------------------------------------------------- */
+/* Core helpers                                                               */
+/* -------------------------------------------------------------------------- */
 
 function loadEnv(path) {
 	if (!existsSync(path)) return;
@@ -77,11 +243,6 @@ function nowSeconds() {
 	return Math.floor(Date.now() / 1000);
 }
 
-function col(value, width = 20) {
-	const str = String(value ?? '');
-	return str.length > width ? `${str.slice(0, width - 1)}.` : str.padEnd(width);
-}
-
 function normalizeUsername(value) {
 	return String(value ?? '')
 		.trim()
@@ -115,50 +276,65 @@ function requireArg(value, usage) {
 }
 
 function printHelp() {
-	console.log(`Skyline server manager
+	header();
+	console.log();
+	const group = (title, rows) => {
+		console.log(theme.brandBold(title));
+		for (const [cmd, desc] of rows) {
+			console.log(`  ${theme.accent(padEndVisible(cmd, 46))}${theme.muted(desc)}`);
+		}
+		console.log();
+	};
 
-Usage:
-  sky                              Open interactive menu
-  sky help                         Show this help
-  sky version                      Show installed Skyline version
+	group('General', [
+		['sky', 'Open the interactive menu'],
+		['sky help', 'Show this help'],
+		['sky version', 'Show installed Skyline version']
+	]);
+	group('Service', [
+		['sky status', 'Show systemd status'],
+		['sky start', 'Start Skyline service'],
+		['sky stop', 'Stop Skyline service'],
+		['sky restart', 'Restart Skyline service'],
+		['sky logs', 'Follow Skyline service logs'],
+		['sky enable', 'Enable service at boot'],
+		['sky disable', 'Disable service at boot'],
+		['sky update', 'Pull, install, build, restart'],
+		['sky repair', 'Reinstall deps, rebuild, verify DB, restart'],
+		['sky uninstall [--purge]', 'Remove service & sky CLI (--purge deletes DB)'],
+		['sky service <command>', 'Same commands under service namespace']
+	]);
+	group('Admin', [
+		['sky admin show', 'Show admin account info'],
+		['sky admin username <username>', 'Change admin username'],
+		['sky admin password [password]', 'Change admin password'],
+		['sky admin reset <username> [password]', 'Reset admin username and password']
+	]);
+	group('Panel paths', [
+		['sky paths show', 'Show panel paths'],
+		['sky paths set <manager> <reseller>', 'Set hidden base paths'],
+		['sky paths clear', 'Reset to default paths']
+	]);
+	group('Resellers', [
+		['sky resellers list', 'List reseller accounts'],
+		['sky resellers create <username> [password]', 'Create a reseller'],
+		['sky resellers password <id> [password]', 'Change reseller password'],
+		['sky resellers reset-password <id> [password]', 'Reset to default password'],
+		['sky resellers activate <id>', 'Activate a reseller'],
+		['sky resellers deactivate <id>', 'Deactivate a reseller']
+	]);
+	group('Database', [
+		['sky db path', 'Show database path'],
+		['sky db integrity', 'Run integrity check']
+	]);
 
-Service:
-  sky status                       Show systemd status
-  sky start                        Start Skyline service
-  sky stop                         Stop Skyline service
-  sky restart                      Restart Skyline service
-  sky logs                         Follow Skyline service logs
-  sky enable                       Enable service at boot
-  sky disable                      Disable service at boot
-  sky update                       Pull, install, build, restart
-  sky service <command>            Same commands under service namespace
-
-Admin:
-  sky admin show
-  sky admin username <username>
-  sky admin password [password]
-  sky admin reset <username> [password]
-
-Panel paths:
-  sky paths show
-  sky paths set <manager-base> <reseller-base>
-  sky paths clear
-
-Resellers:
-  sky resellers list
-  sky resellers create <username> [password]
-  sky resellers password <id> [password]
-  sky resellers reset-password <id> [password]
-  sky resellers activate <id>
-  sky resellers deactivate <id>
-
-Database:
-  sky db path
-  sky db integrity
-
-Environment:
-  DATABASE_PATH      Override SQLite path. Default: ${databasePath}
-  SKYLINE_SERVICE   Override systemd service name. Default: ${serviceName}`);
+	console.log(theme.brandBold('Environment'));
+	console.log(
+		`  ${theme.accent(padEndVisible('DATABASE_PATH', 46))}${theme.muted('Override SQLite path. Default: ' + databasePath)}`
+	);
+	console.log(
+		`  ${theme.accent(padEndVisible('SKYLINE_SERVICE', 46))}${theme.muted('Override service name. Default: ' + serviceName)}`
+	);
 }
 
 function runCommand(command, args, options = {}) {
@@ -167,64 +343,50 @@ function runCommand(command, args, options = {}) {
 	if (typeof result.status === 'number' && result.status !== 0) process.exit(result.status);
 }
 
+function runAsync(command, args, options = {}) {
+	return new Promise((resolveValue, rejectValue) => {
+		const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'], ...options });
+		let output = '';
+		child.stdout?.on('data', (chunk) => (output += chunk));
+		child.stderr?.on('data', (chunk) => (output += chunk));
+		child.on('error', rejectValue);
+		child.on('close', (code) => {
+			if (code === 0) resolveValue(output);
+			else
+				rejectValue(
+					Object.assign(new Error(`${command} ${args.join(' ')} exited with code ${code}`), {
+						output
+					})
+				);
+		});
+	});
+}
+
+function isRoot() {
+	return typeof process.getuid === 'function' && process.getuid() === 0;
+}
+
+function privCommand(command, args) {
+	return isRoot() ? [command, args] : ['sudo', [command, ...args]];
+}
+
+function runPriv(command, args) {
+	const [cmd, cmdArgs] = privCommand(command, args);
+	runCommand(cmd, cmdArgs);
+}
+
+function tryPriv(command, args) {
+	const [cmd, cmdArgs] = privCommand(command, args);
+	const result = spawnSync(cmd, cmdArgs, { stdio: 'inherit' });
+	return !result.error && result.status === 0;
+}
+
 function systemctl(args) {
 	runCommand('systemctl', args);
 }
 
 function journalctl() {
 	runCommand('journalctl', ['-u', serviceName, '-f', '-n', '100']);
-}
-
-async function prompt(question) {
-	const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-	try {
-		return (await rl.question(question)).trim();
-	} finally {
-		rl.close();
-	}
-}
-
-async function promptSecret(question) {
-	if (!process.stdin.isTTY || !process.stdout.isTTY) return prompt(question);
-
-	return await new Promise((resolveValue) => {
-		let value = '';
-		const stdin = process.stdin;
-		const stdout = process.stdout;
-
-		function cleanup() {
-			stdin.setRawMode(false);
-			stdin.pause();
-			stdin.off('data', onData);
-		}
-
-		function onData(chunk) {
-			const char = String(chunk);
-			if (char === '\u0003') {
-				cleanup();
-				stdout.write('\n');
-				process.exit(130);
-			}
-			if (char === '\r' || char === '\n') {
-				cleanup();
-				stdout.write('\n');
-				resolveValue(value);
-				return;
-			}
-			if (char === '\u007f') {
-				if (value.length > 0) value = value.slice(0, -1);
-				return;
-			}
-			value += char;
-			stdout.write('*');
-		}
-
-		stdout.write(question);
-		stdin.setRawMode(true);
-		stdin.resume();
-		stdin.setEncoding('utf8');
-		stdin.on('data', onData);
-	});
 }
 
 async function setSetting(db, key, value) {
@@ -246,70 +408,156 @@ async function getSetting(db, key) {
 	return result.rows[0]?.value ? String(result.rows[0].value) : '';
 }
 
-const commands = {
-	version() {
-		const packageJson = JSON.parse(readFileSync(resolve(projectRoot, 'package.json'), 'utf8'));
-		console.log(`Skyline ${packageJson.version ?? 'unknown'}`);
-	},
+/* -------------------------------------------------------------------------- */
+/* Service operations                                                         */
+/* -------------------------------------------------------------------------- */
 
-	async status() {
+const svc = {
+	status() {
+		section(`Service status · ${serviceName}`);
 		systemctl(['status', serviceName, '--no-pager']);
 	},
-
-	async start() {
+	start() {
 		systemctl(['start', serviceName]);
+		ok(`${theme.value(serviceName)} started.`);
 	},
-
-	async stop() {
+	stop() {
 		systemctl(['stop', serviceName]);
+		ok(`${theme.value(serviceName)} stopped.`);
 	},
-
-	async restart() {
+	restart() {
 		systemctl(['restart', serviceName]);
+		ok(`${theme.value(serviceName)} restarted.`);
 	},
-
-	async enable() {
+	enable() {
 		systemctl(['enable', serviceName]);
+		ok(`${theme.value(serviceName)} enabled at boot.`);
 	},
-
-	async disable() {
+	disable() {
 		systemctl(['disable', serviceName]);
+		ok(`${theme.value(serviceName)} disabled at boot.`);
+	},
+	logs() {
+		info(`Following logs for ${theme.value(serviceName)} ${theme.dim('(Ctrl+C to stop)')}`);
+		journalctl();
+	}
+};
+
+/* -------------------------------------------------------------------------- */
+/* Commands                                                                   */
+/* -------------------------------------------------------------------------- */
+
+const commands = {
+	version() {
+		console.log(`${theme.brandBold('Skyline')} ${theme.value(readVersion())}`);
 	},
 
-	async logs() {
-		journalctl();
-	},
+	status: () => svc.status(),
+	start: () => svc.start(),
+	stop: () => svc.stop(),
+	restart: () => svc.restart(),
+	enable: () => svc.enable(),
+	disable: () => svc.disable(),
+	logs: () => svc.logs(),
 
 	async update() {
-		runCommand('git', ['-C', projectRoot, 'pull', '--ff-only']);
-		runCommand('npm', ['ci'], { cwd: projectRoot });
-		runCommand('npm', ['run', 'build'], { cwd: projectRoot });
-		systemctl(['restart', serviceName]);
+		header();
+		console.log();
+		await withSpinner(
+			'Pulling latest changes',
+			() => runAsync('git', ['-C', projectRoot, 'pull', '--ff-only']),
+			'Pulled latest changes'
+		);
+		await withSpinner(
+			'Installing dependencies',
+			() => runAsync('npm', ['ci'], { cwd: projectRoot }),
+			'Dependencies installed'
+		);
+		await withSpinner(
+			'Building application',
+			() => runAsync('npm', ['run', 'build'], { cwd: projectRoot }),
+			'Build complete'
+		);
+		await withSpinner(
+			'Restarting service',
+			() => runAsync('systemctl', ['restart', serviceName]),
+			`${serviceName} restarted`
+		);
+		console.log();
+		ok(theme.bold('Skyline updated successfully.'));
 	},
 
-	service: {
-		async status() {
-			systemctl(['status', serviceName, '--no-pager']);
-		},
-		async start() {
-			systemctl(['start', serviceName]);
-		},
-		async stop() {
-			systemctl(['stop', serviceName]);
-		},
-		async restart() {
-			systemctl(['restart', serviceName]);
-		},
-		async enable() {
-			systemctl(['enable', serviceName]);
-		},
-		async disable() {
-			systemctl(['disable', serviceName]);
-		},
-		async logs() {
-			journalctl();
-		}
+	async repair() {
+		header();
+		console.log();
+		await withSpinner(
+			'Reinstalling dependencies',
+			() => runAsync('npm', ['ci'], { cwd: projectRoot }),
+			'Dependencies reinstalled'
+		);
+		await withSpinner(
+			'Rebuilding application',
+			() => runAsync('npm', ['run', 'build'], { cwd: projectRoot }),
+			'Rebuild complete'
+		);
+		await withSpinner(
+			'Verifying database',
+			async () => {
+				const db = getDb();
+				try {
+					await ensureAdminTables(db);
+					const result = await db.execute('PRAGMA integrity_check');
+					const status = String(result.rows[0]?.integrity_check ?? 'unknown');
+					if (status !== 'ok') throw new Error(`integrity check failed: ${status}`);
+					return status;
+				} finally {
+					db.close();
+				}
+			},
+			'Database verified'
+		);
+		await withSpinner(
+			'Restarting service',
+			() => runAsync('systemctl', ['restart', serviceName]),
+			`${serviceName} restarted`
+		);
+		console.log();
+		ok(theme.bold('Repair complete.'));
 	},
+
+	async uninstall(...flags) {
+		const purge = flags.includes('--purge') || flags.includes('-p');
+		if (process.stdin.isTTY) {
+			const confirmed = await askConfirm(
+				`Uninstall the ${serviceName} service${purge ? ' and DELETE the database' : ''}?`
+			);
+			if (!confirmed) {
+				info('Cancelled.');
+				return;
+			}
+		}
+		section(`Uninstall · ${serviceName}`);
+		const unitPath = `/etc/systemd/system/${serviceName}.service`;
+
+		tryPriv('systemctl', ['disable', '--now', serviceName]);
+		if (tryPriv('rm', ['-f', unitPath])) ok('Removed systemd unit.');
+		runPriv('systemctl', ['daemon-reload']);
+		tryPriv('systemctl', ['reset-failed', serviceName]);
+
+		if (tryPriv('rm', ['-f', '/usr/local/bin/sky'])) ok('Removed sky CLI symlink.');
+
+		if (purge) {
+			tryPriv('rm', ['-f', databasePath, `${databasePath}-wal`, `${databasePath}-shm`]);
+			ok('Database deleted.');
+		} else {
+			info(`Database preserved at ${theme.value(databasePath)}`);
+		}
+		info(`Project files remain at ${theme.value(projectRoot)}`);
+		console.log();
+		ok(theme.bold('Skyline service uninstalled.'));
+	},
+
+	service: svc,
 
 	admin: {
 		async show() {
@@ -317,9 +565,12 @@ const commands = {
 			try {
 				const username = (await getSetting(db, 'admin_username')) || 'admin';
 				const hasPassword = Boolean(await getSetting(db, 'passkey_hash'));
-				console.log(`Admin username: ${username}`);
-				console.log(`Password set:    ${hasPassword ? 'yes' : 'no'}`);
-				console.log(`Database:        ${databasePath}`);
+				section('Admin account');
+				kv([
+					['Username', theme.value(username)],
+					['Password', hasPassword ? theme.success('set') : theme.warn('not set')],
+					['Database', theme.muted(databasePath)]
+				]);
 			} finally {
 				db.close();
 			}
@@ -332,22 +583,22 @@ const commands = {
 			try {
 				await setSetting(db, 'admin_username', nextUsername);
 				await db.execute('DELETE FROM admin_sessions');
-				console.log(`Admin username changed to: ${nextUsername}`);
-				console.log('Active admin sessions revoked.');
+				ok(`Admin username changed to ${theme.value(nextUsername)}.`);
+				info('Active admin sessions revoked.');
 			} finally {
 				db.close();
 			}
 		},
 
 		async password(password) {
-			const nextPassword = password || (await promptSecret('New admin password: '));
+			const nextPassword = password || (await askSecret('New admin password:'));
 			if (nextPassword.length < 6) throw new Error('Admin password must be at least 6 characters.');
 			const db = getDb();
 			try {
 				await setSetting(db, 'passkey_hash', await hashSecret(nextPassword));
 				await db.execute('DELETE FROM admin_sessions');
-				console.log('Admin password changed.');
-				console.log('Active admin sessions revoked.');
+				ok('Admin password changed.');
+				info('Active admin sessions revoked.');
 			} finally {
 				db.close();
 			}
@@ -355,7 +606,7 @@ const commands = {
 
 		async reset(username, password) {
 			const nextUsername = requireArg(username, 'sky admin reset <username> [password]').trim();
-			const nextPassword = password || (await promptSecret('New admin password: '));
+			const nextPassword = password || (await askSecret('New admin password:'));
 			if (nextUsername.length < 3) throw new Error('Admin username must be at least 3 characters.');
 			if (nextPassword.length < 6) throw new Error('Admin password must be at least 6 characters.');
 			const db = getDb();
@@ -363,9 +614,9 @@ const commands = {
 				await setSetting(db, 'admin_username', nextUsername);
 				await setSetting(db, 'passkey_hash', await hashSecret(nextPassword));
 				await db.execute('DELETE FROM admin_sessions');
-				console.log(`Admin username changed to: ${nextUsername}`);
-				console.log('Admin password changed.');
-				console.log('Active admin sessions revoked.');
+				ok(`Admin username changed to ${theme.value(nextUsername)}.`);
+				ok('Admin password changed.');
+				info('Active admin sessions revoked.');
 			} finally {
 				db.close();
 			}
@@ -378,12 +629,14 @@ const commands = {
 			try {
 				const managerBasePath = await getSetting(db, 'manager_base_path');
 				const resellerBasePath = await getSetting(db, 'reseller_base_path');
-				console.log(
-					`Manager path:  ${managerBasePath ? `/${managerBasePath}/manager` : '/manage'}`
-				);
-				console.log(
-					`Reseller path: ${resellerBasePath ? `/${resellerBasePath}/reseller` : '/reseller'}`
-				);
+				section('Panel paths');
+				kv([
+					['Manager', theme.value(managerBasePath ? `/${managerBasePath}/manager` : '/manage')],
+					[
+						'Reseller',
+						theme.value(resellerBasePath ? `/${resellerBasePath}/reseller` : '/reseller')
+					]
+				]);
 			} finally {
 				db.close();
 			}
@@ -403,8 +656,11 @@ const commands = {
 			try {
 				await setSetting(db, 'manager_base_path', nextManagerBase);
 				await setSetting(db, 'reseller_base_path', nextResellerBase);
-				console.log(`Manager path:  /${nextManagerBase}/manager`);
-				console.log(`Reseller path: /${nextResellerBase}/reseller`);
+				ok('Panel paths updated.');
+				kv([
+					['Manager', theme.value(`/${nextManagerBase}/manager`)],
+					['Reseller', theme.value(`/${nextResellerBase}/reseller`)]
+				]);
 			} finally {
 				db.close();
 			}
@@ -415,7 +671,8 @@ const commands = {
 			try {
 				await setSetting(db, 'manager_base_path', '');
 				await setSetting(db, 'reseller_base_path', '');
-				console.log('Panel paths cleared. Defaults are enabled: /manage and /reseller');
+				ok('Panel paths cleared.');
+				info('Defaults enabled: /manage and /reseller');
 			} finally {
 				db.close();
 			}
@@ -432,22 +689,25 @@ const commands = {
 					 WHERE COALESCE(is_system_manager, 0) = 0
 					 ORDER BY created_at DESC`
 				);
+				section('Resellers');
 				if (result.rows.length === 0) {
-					console.log('(no resellers)');
+					info(theme.muted('No resellers yet.'));
 					return;
 				}
-				console.log(
-					`${col('ID', 6)}${col('Username', 24)}${col('Email', 30)}${col('Active', 8)}${col('Must change', 14)}${col('Created', 12)}`
-				);
-				console.log('-'.repeat(94));
-				for (const row of result.rows) {
+				const rows = result.rows.map((row) => {
 					const created = row.created_at
 						? new Date(Number(row.created_at) * 1000).toISOString().slice(0, 10)
 						: '-';
-					console.log(
-						`${col(row.id, 6)}${col(row.username, 24)}${col(row.email || '-', 30)}${col(row.is_active ? 'yes' : 'no', 8)}${col(row.must_change_password ? 'yes' : 'no', 14)}${col(created, 12)}`
-					);
-				}
+					return [
+						theme.muted(`#${row.id}`),
+						theme.value(String(row.username)),
+						String(row.email || '-'),
+						row.is_active ? theme.success('active') : theme.error('inactive'),
+						row.must_change_password ? theme.warn('yes') : theme.dim('no'),
+						theme.muted(created)
+					];
+				});
+				table(['ID', 'Username', 'Email', 'Status', 'Must change', 'Created'], rows);
 			} finally {
 				db.close();
 			}
@@ -457,7 +717,7 @@ const commands = {
 			const normalized = normalizeUsername(
 				requireArg(username, 'sky resellers create <username> [password]')
 			);
-			const nextPassword = password || (await promptSecret('Reseller password: '));
+			const nextPassword = password || (await askSecret('Reseller password:'));
 			if (normalized.length < 3)
 				throw new Error('Reseller username must be at least 3 characters.');
 			if (nextPassword.length < 6)
@@ -476,7 +736,9 @@ const commands = {
 					      VALUES (?, ?, ?, 1, '', 0, '', ?, ?)`,
 					args: [normalized, normalized, await hashSecret(nextPassword), now, now]
 				});
-				console.log(`Reseller created: #${result.lastInsertRowid} ${normalized}`);
+				ok(
+					`Reseller created: ${theme.muted('#' + result.lastInsertRowid)} ${theme.value(normalized)}`
+				);
 			} finally {
 				db.close();
 			}
@@ -486,7 +748,7 @@ const commands = {
 			const resellerId = Number(requireArg(id, 'sky resellers password <id> [password]'));
 			if (!Number.isInteger(resellerId) || resellerId <= 0)
 				throw new Error('Reseller id must be a positive integer.');
-			const nextPassword = password || (await promptSecret('New reseller password: '));
+			const nextPassword = password || (await askSecret('New reseller password:'));
 			if (nextPassword.length < 6)
 				throw new Error('Reseller password must be at least 6 characters.');
 			const db = getDb();
@@ -500,8 +762,8 @@ const commands = {
 					sql: 'DELETE FROM reseller_sessions WHERE reseller_id = ?',
 					args: [resellerId]
 				});
-				console.log(`Password changed for reseller #${resellerId}.`);
-				console.log('Active reseller sessions revoked.');
+				ok(`Password changed for reseller ${theme.muted('#' + resellerId)}.`);
+				info('Active reseller sessions revoked.');
 			} finally {
 				db.close();
 			}
@@ -509,7 +771,7 @@ const commands = {
 
 		async 'reset-password'(id, password) {
 			await commands.resellers.password(id, password || 'skyline123');
-			console.log('Default password used: skyline123');
+			info(`Default password used: ${theme.value('skyline123')}`);
 		},
 
 		async activate(id) {
@@ -523,16 +785,22 @@ const commands = {
 
 	db: {
 		path() {
-			console.log(databasePath);
+			console.log(theme.value(databasePath));
 		},
 
 		async integrity() {
 			const db = getDb();
 			try {
-				const result = await db.execute('PRAGMA integrity_check');
-				const status = String(result.rows[0]?.integrity_check ?? 'unknown');
-				if (status !== 'ok') throw new Error(`Database integrity check failed: ${status}`);
-				console.log('Database integrity: OK');
+				await withSpinner(
+					'Checking database integrity',
+					async () => {
+						const result = await db.execute('PRAGMA integrity_check');
+						const status = String(result.rows[0]?.integrity_check ?? 'unknown');
+						if (status !== 'ok') throw new Error(`integrity check failed: ${status}`);
+						return status;
+					},
+					'Database integrity: OK'
+				);
 			} finally {
 				db.close();
 			}
@@ -558,50 +826,192 @@ async function setResellerActive(id, active) {
 				sql: 'DELETE FROM reseller_sessions WHERE reseller_id = ?',
 				args: [resellerId]
 			});
-		console.log(`Reseller #${resellerId} ${active ? 'activated' : 'deactivated'}.`);
+		ok(
+			`Reseller ${theme.muted('#' + resellerId)} ${active ? theme.success('activated') : theme.warn('deactivated')}.`
+		);
 	} finally {
 		db.close();
 	}
 }
 
-async function runMenu() {
-	for (;;) {
-		console.log(`\nSkyline CLI (${serviceName})`);
-		console.log('1) Service status');
-		console.log('2) Start service');
-		console.log('3) Stop service');
-		console.log('4) Restart service');
-		console.log('5) Follow logs');
-		console.log('6) Show admin');
-		console.log('7) Change admin username');
-		console.log('8) Change admin password');
-		console.log('9) Show panel paths');
-		console.log('10) Set panel paths');
-		console.log('11) List resellers');
-		console.log('12) Create reseller');
-		console.log('0) Exit');
+/* -------------------------------------------------------------------------- */
+/* Interactive menu                                                           */
+/* -------------------------------------------------------------------------- */
 
-		const choice = await prompt('Select: ');
-		if (choice === '0') return;
-		if (choice === '1') await commands.status();
-		else if (choice === '2') await commands.start();
-		else if (choice === '3') await commands.stop();
-		else if (choice === '4') await commands.restart();
-		else if (choice === '5') await commands.logs();
-		else if (choice === '6') await commands.admin.show();
-		else if (choice === '7') await commands.admin.username(await prompt('New admin username: '));
-		else if (choice === '8') await commands.admin.password();
-		else if (choice === '9') await commands.paths.show();
-		else if (choice === '10')
-			await commands.paths.set(
-				await prompt('Manager base path: '),
-				await prompt('Reseller base path: ')
-			);
-		else if (choice === '11') await commands.resellers.list();
-		else if (choice === '12') await commands.resellers.create(await prompt('Reseller username: '));
-		else console.log('Unknown option.');
+const separator = { role: 'separator', message: theme.dim('────────────') };
+
+async function pickReseller(message) {
+	const db = getDb();
+	try {
+		const result = await db.execute(
+			`SELECT id, username, is_active FROM reseller_accounts
+			 WHERE COALESCE(is_system_manager, 0) = 0
+			 ORDER BY created_at DESC`
+		);
+		if (result.rows.length === 0) {
+			info(theme.muted('No resellers found.'));
+			return null;
+		}
+		const choice = await askSelect(message, [
+			...result.rows.map((row) => ({
+				name: String(row.id),
+				message: `${theme.muted('#' + row.id)}  ${theme.value(String(row.username))}  ${row.is_active ? theme.success('active') : theme.error('inactive')}`
+			})),
+			separator,
+			{ name: 'back', message: theme.muted('Back') }
+		]);
+		return choice === 'back' ? null : Number(choice);
+	} finally {
+		db.close();
 	}
 }
+
+async function serviceMenu() {
+	const action = await askSelect('Service management', [
+		{ name: 'status', message: 'Status' },
+		{ name: 'start', message: 'Start' },
+		{ name: 'stop', message: 'Stop' },
+		{ name: 'restart', message: 'Restart' },
+		{ name: 'enable', message: 'Enable at boot' },
+		{ name: 'disable', message: 'Disable at boot' },
+		{ name: 'logs', message: 'Follow logs' },
+		separator,
+		{ name: 'update', message: 'Update (pull, build, restart)' },
+		{ name: 'repair', message: 'Repair (reinstall, rebuild, restart)' },
+		{ name: 'uninstall', message: theme.warn('Uninstall service') },
+		separator,
+		{ name: 'back', message: theme.muted('Back') }
+	]);
+	if (action === 'back') return;
+	if (action === 'update') return commands.update();
+	if (action === 'repair') return commands.repair();
+	if (action === 'uninstall') return commands.uninstall();
+	await svc[action]();
+}
+
+async function adminMenu() {
+	const action = await askSelect('Admin account', [
+		{ name: 'show', message: 'Show admin info' },
+		{ name: 'username', message: 'Change username' },
+		{ name: 'password', message: 'Change password' },
+		separator,
+		{ name: 'back', message: theme.muted('Back') }
+	]);
+	if (action === 'back') return;
+	if (action === 'show') return commands.admin.show();
+	if (action === 'username') {
+		const username = await askText('New admin username:', {
+			validate: (value) => value.trim().length >= 3 || 'At least 3 characters.'
+		});
+		return commands.admin.username(username);
+	}
+	if (action === 'password') return commands.admin.password();
+}
+
+async function pathsMenu() {
+	const action = await askSelect('Panel paths', [
+		{ name: 'show', message: 'Show paths' },
+		{ name: 'set', message: 'Set paths' },
+		{ name: 'clear', message: 'Reset to defaults' },
+		separator,
+		{ name: 'back', message: theme.muted('Back') }
+	]);
+	if (action === 'back') return;
+	if (action === 'show') return commands.paths.show();
+	if (action === 'set') {
+		const managerBase = await askText('Manager base path:');
+		const resellerBase = await askText('Reseller base path:');
+		return commands.paths.set(managerBase, resellerBase);
+	}
+	if (action === 'clear') {
+		if (await askConfirm('Reset panel paths to defaults?')) return commands.paths.clear();
+		info('Cancelled.');
+	}
+}
+
+async function resellersMenu() {
+	const action = await askSelect('Resellers', [
+		{ name: 'list', message: 'List resellers' },
+		{ name: 'create', message: 'Create reseller' },
+		{ name: 'password', message: 'Change reseller password' },
+		{ name: 'activate', message: 'Activate reseller' },
+		{ name: 'deactivate', message: 'Deactivate reseller' },
+		separator,
+		{ name: 'back', message: theme.muted('Back') }
+	]);
+	if (action === 'back') return;
+	if (action === 'list') return commands.resellers.list();
+	if (action === 'create') {
+		const username = await askText('Reseller username:', {
+			validate: (value) => normalizeUsername(value).length >= 3 || 'At least 3 characters.'
+		});
+		const password = await askSecret('Reseller password:');
+		return commands.resellers.create(username, password);
+	}
+
+	const id = await pickReseller('Select a reseller');
+	if (!id) return;
+	if (action === 'password') {
+		const password = await askSecret('New reseller password:');
+		return commands.resellers.password(String(id), password);
+	}
+	if (action === 'activate') return commands.resellers.activate(String(id));
+	if (action === 'deactivate') {
+		if (await askConfirm(`Deactivate reseller #${id}?`))
+			return commands.resellers.deactivate(String(id));
+		info('Cancelled.');
+	}
+}
+
+async function databaseMenu() {
+	const action = await askSelect('Database', [
+		{ name: 'path', message: 'Show database path' },
+		{ name: 'integrity', message: 'Run integrity check' },
+		separator,
+		{ name: 'back', message: theme.muted('Back') }
+	]);
+	if (action === 'back') return;
+	if (action === 'path') return commands.db.path();
+	if (action === 'integrity') return commands.db.integrity();
+}
+
+async function runMenu() {
+	ensureTty();
+	console.log();
+	header();
+	for (;;) {
+		console.log();
+		const choice = await askSelect('What would you like to do?', [
+			{ name: 'service', message: 'Service management' },
+			{ name: 'admin', message: 'Admin account' },
+			{ name: 'paths', message: 'Panel paths' },
+			{ name: 'resellers', message: 'Resellers' },
+			{ name: 'database', message: 'Database' },
+			separator,
+			{ name: 'exit', message: theme.muted('Exit') }
+		]);
+
+		if (choice === 'exit') {
+			info('Goodbye.');
+			return;
+		}
+
+		try {
+			if (choice === 'service') await serviceMenu();
+			else if (choice === 'admin') await adminMenu();
+			else if (choice === 'paths') await pathsMenu();
+			else if (choice === 'resellers') await resellersMenu();
+			else if (choice === 'database') await databaseMenu();
+		} catch (error) {
+			if (error === '' || error == null) continue;
+			fail(error instanceof Error ? error.message : String(error));
+		}
+	}
+}
+
+/* -------------------------------------------------------------------------- */
+/* Entry point                                                                */
+/* -------------------------------------------------------------------------- */
 
 async function main() {
 	const [group, subcommand, ...args] = process.argv.slice(2);
@@ -627,8 +1037,9 @@ async function main() {
 	}
 
 	const handler = commandGroup[subcommand];
-	if (!handler) {
-		console.error(`Unknown command: ${group}${subcommand ? ` ${subcommand}` : ''}\n`);
+	if (typeof handler !== 'function') {
+		fail(`Unknown command: ${group}${subcommand ? ` ${subcommand}` : ''}`);
+		console.log();
 		printHelp();
 		process.exit(1);
 	}
@@ -637,6 +1048,11 @@ async function main() {
 }
 
 main().catch((error) => {
-	console.error('Error:', error instanceof Error ? error.message : error);
+	if (error === '' || error == null) {
+		console.log();
+		process.exit(0);
+	}
+	console.log();
+	fail(theme.bold(error instanceof Error ? error.message : String(error)));
 	process.exit(1);
 });
