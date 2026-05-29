@@ -3,7 +3,7 @@ set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICE_NAME="${SKYLINE_SERVICE:-skyline}"
-REPO_URL="${SKYLINE_REPO_URL:-https://gitlab.chabokan.net/catinrage/skyline.git}"
+REPO_URL="${SKYLINE_REPO_URL:-https://github.com/catinrage/skyline.git}"
 INSTALL_DIR="${SKYLINE_INSTALL_DIR:-/opt/skyline}"
 BRANCH="${SKYLINE_BRANCH:-main}"
 SKIP_BUILD=0
@@ -16,7 +16,7 @@ Skyline installer
 
 Usage:
   ./install.sh [--no-build] [--no-service]
-  curl -Ls https://gitlab.chabokan.net/catinrage/skyline/-/raw/main/install.sh | bash
+  curl -Ls https://raw.githubusercontent.com/catinrage/skyline/main/install.sh | bash
 
 What it does:
   - clones or updates Skyline when run through curl

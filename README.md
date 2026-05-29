@@ -27,7 +27,7 @@ Skyline is a SvelteKit and Node.js control panel for operating a VPN business on
 Run this on the VPS:
 
 ```bash
-curl -Ls https://gitlab.chabokan.net/catinrage/skyline/-/raw/main/install.sh | bash
+curl -Ls https://raw.githubusercontent.com/catinrage/skyline/main/install.sh | bash
 ```
 
 The installer clones or updates Skyline in `/opt/skyline`, installs dependencies with `npm ci`, builds the app, installs `/usr/local/bin/sky`, and creates/enables a `skyline` systemd service.
@@ -35,9 +35,9 @@ The installer clones or updates Skyline in `/opt/skyline`, installs dependencies
 Useful install overrides:
 
 ```bash
-curl -Ls https://gitlab.chabokan.net/catinrage/skyline/-/raw/main/install.sh | SKYLINE_INSTALL_DIR=/srv/skyline bash
-curl -Ls https://gitlab.chabokan.net/catinrage/skyline/-/raw/main/install.sh | SKYLINE_BRANCH=main bash
-curl -Ls https://gitlab.chabokan.net/catinrage/skyline/-/raw/main/install.sh | bash -s -- --no-service
+curl -Ls https://raw.githubusercontent.com/catinrage/skyline/main/install.sh | SKYLINE_INSTALL_DIR=/srv/skyline bash
+curl -Ls https://raw.githubusercontent.com/catinrage/skyline/main/install.sh | SKYLINE_BRANCH=main bash
+curl -Ls https://raw.githubusercontent.com/catinrage/skyline/main/install.sh | bash -s -- --no-service
 ```
 
 From an already-cloned project directory:
@@ -50,33 +50,40 @@ Use `./install.sh --no-service` when you only want dependencies, build output, a
 
 ## Environment
 
+Skyline now keeps x-ui, Xray, logging, SMTP, panel paths, and most runtime configuration in the manager panel settings. Keep `.env` focused on deployment-level process settings only.
+
 Create `/opt/skyline/.env` after install, or create `.env` before running locally:
 
 ```bash
 HOST=0.0.0.0
 PORT=9133
-ORIGIN=https://panel.example.com
-
-XUI_PANEL_URL=http://127.0.0.1:2053/base-path/panel
-XUI_API_TOKEN=paste-your-3x-ui-api-token-here
-XUI_PUBLIC_HOST=your.server.ip.or.domain
-XRAY_BINARY_PATH=/usr/local/x-ui/bin/xray-linux-amd64
-
-LOG_LEVEL=warning
-LOG_FILE=
 ```
 
-Important environment notes:
+Optional deployment settings:
 
-- `XUI_PANEL_URL` must point to the x-ui/3x-ui panel path itself and should end in `/panel`.
-- `XUI_API_TOKEN` is read server-side only. Do not expose it to the browser or commit it.
-- `XUI_PUBLIC_HOST` overrides the hostname used in generated VLESS links.
-- `XRAY_BINARY_PATH` is used for server-side config latency tests. With x-ui/3x-ui this is often `/usr/local/x-ui/bin/xray-linux-amd64`.
-- `ORIGIN` should match the public HTTPS origin when using SvelteKit form actions in production.
-- Behind a reverse proxy, prefer `PROTOCOL_HEADER`, `HOST_HEADER`, and `PORT_HEADER` when the public origin is dynamic.
-- `DATABASE_PATH` is optional. By default Skyline uses `data/skyline.sqlite` under the app directory.
+```bash
+# Use this only when serving Skyline directly without forwarded headers.
+ORIGIN=https://panel.example.com
 
-Restart after changing `.env`:
+# Prefer these behind Nginx/Caddy/Cloudflare Tunnel/reverse proxies.
+PROTOCOL_HEADER=x-forwarded-proto
+HOST_HEADER=x-forwarded-host
+PORT_HEADER=x-forwarded-port
+
+# Optional custom SQLite path. Default: data/skyline.sqlite
+DATABASE_PATH=/opt/skyline/data/skyline.sqlite
+```
+
+Configure these from the manager panel after first login:
+
+- x-ui/3x-ui panel URL and API token.
+- Public host used in generated VLESS links.
+- Xray binary path for server-side latency tests.
+- Log level and optional log file.
+- SMTP password recovery settings.
+- Hidden manager/reseller panel paths.
+
+Restart only when changing process-level `.env` values:
 
 ```bash
 sky restart
@@ -329,6 +336,6 @@ sky db integrity
 Common production issues:
 
 - `403 Forbidden` on form submit: set `ORIGIN` correctly or configure forwarded headers behind the reverse proxy.
-- x-ui data does not load: verify `XUI_PANEL_URL` ends in `/panel` and `XUI_API_TOKEN` is valid.
-- Latency test fails: verify `XRAY_BINARY_PATH` and `curl` exist on the server.
+- x-ui data does not load: verify the x-ui/3x-ui URL and API token in the manager panel settings.
+- Latency test fails: verify the Xray binary path in manager settings and confirm `curl` exists on the server.
 - Emails do not arrive: verify SMTP credentials and DNS deliverability records.
