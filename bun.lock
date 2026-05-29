@@ -1,0 +1,585 @@
+{
+  "lockfileVersion": 1,
+  "configVersion": 0,
+  "workspaces": {
+    "": {
+      "name": "skyline",
+      "dependencies": {
+        "@libsql/client": "^0.17.2",
+        "@mdi/font": "^7.4.47",
+        "chalk": "^5.6.2",
+        "qrcode": "^1.5.4",
+        "svelte-sonner": "^1.1.0",
+        "svelte-tippy": "^1.3.2",
+        "tippy.js": "^6.3.7",
+        "zod": "^3.25.46",
+      },
+      "devDependencies": {
+        "@eslint/compat": "^1.2.5",
+        "@eslint/js": "^9.18.0",
+        "@sveltejs/adapter-auto": "^4.0.0",
+        "@sveltejs/adapter-node": "^5.5.4",
+        "@sveltejs/kit": "^2.16.0",
+        "@sveltejs/vite-plugin-svelte": "^5.0.0",
+        "@tailwindcss/forms": "^0.5.9",
+        "@tailwindcss/typography": "^0.5.15",
+        "@tailwindcss/vite": "^4.0.0",
+        "@types/qrcode": "^1.5.6",
+        "eslint": "^9.18.0",
+        "eslint-config-prettier": "^10.0.1",
+        "eslint-plugin-svelte": "^3.0.0",
+        "globals": "^16.0.0",
+        "prettier": "^3.4.2",
+        "prettier-plugin-svelte": "^3.3.3",
+        "prettier-plugin-tailwindcss": "^0.6.11",
+        "svelte": "^5.0.0",
+        "svelte-check": "^4.0.0",
+        "tailwindcss": "^4.0.0",
+        "typescript": "^5.0.0",
+        "typescript-eslint": "^8.20.0",
+        "vite": "^6.2.5",
+      },
+    },
+  },
+  "packages": {
+    "@esbuild/linux-x64": ["@esbuild/linux-x64@0.25.12", "https://mirror2.chabokan.net/npm/@esbuild/linux-x64/-/linux-x64-0.25.12.tgz", { "os": "linux", "cpu": "x64" }, ""],
+
+    "@eslint-community/eslint-utils": ["@eslint-community/eslint-utils@4.9.1", "https://mirror2.chabokan.net/npm/@eslint-community/eslint-utils/-/eslint-utils-4.9.1.tgz", { "dependencies": { "eslint-visitor-keys": "^3.4.3" }, "peerDependencies": { "eslint": "^6.0.0 || ^7.0.0 || >=8.0.0" } }, ""],
+
+    "@eslint-community/regexpp": ["@eslint-community/regexpp@4.12.2", "https://mirror2.chabokan.net/npm/@eslint-community/regexpp/-/regexpp-4.12.2.tgz", {}, ""],
+
+    "@eslint/compat": ["@eslint/compat@1.4.1", "https://mirror2.chabokan.net/npm/@eslint/compat/-/compat-1.4.1.tgz", { "dependencies": { "@eslint/core": "^0.17.0" }, "peerDependencies": { "eslint": "^8.40 || 9" } }, ""],
+
+    "@eslint/config-array": ["@eslint/config-array@0.21.2", "https://mirror2.chabokan.net/npm/@eslint/config-array/-/config-array-0.21.2.tgz", { "dependencies": { "@eslint/object-schema": "^2.1.7", "debug": "^4.3.1", "minimatch": "^3.1.5" } }, ""],
+
+    "@eslint/config-helpers": ["@eslint/config-helpers@0.4.2", "https://mirror2.chabokan.net/npm/@eslint/config-helpers/-/config-helpers-0.4.2.tgz", { "dependencies": { "@eslint/core": "^0.17.0" } }, ""],
+
+    "@eslint/core": ["@eslint/core@0.17.0", "https://mirror2.chabokan.net/npm/@eslint/core/-/core-0.17.0.tgz", { "dependencies": { "@types/json-schema": "^7.0.15" } }, ""],
+
+    "@eslint/eslintrc": ["@eslint/eslintrc@3.3.5", "https://mirror2.chabokan.net/npm/@eslint/eslintrc/-/eslintrc-3.3.5.tgz", { "dependencies": { "ajv": "^6.14.0", "debug": "^4.3.2", "espree": "^10.0.1", "globals": "^14.0.0", "ignore": "^5.2.0", "import-fresh": "^3.2.1", "js-yaml": "^4.1.1", "minimatch": "^3.1.5", "strip-json-comments": "^3.1.1" } }, ""],
+
+    "@eslint/js": ["@eslint/js@9.39.4", "https://mirror2.chabokan.net/npm/@eslint/js/-/js-9.39.4.tgz", {}, ""],
+
+    "@eslint/object-schema": ["@eslint/object-schema@2.1.7", "https://mirror2.chabokan.net/npm/@eslint/object-schema/-/object-schema-2.1.7.tgz", {}, ""],
+
+    "@eslint/plugin-kit": ["@eslint/plugin-kit@0.4.1", "https://mirror2.chabokan.net/npm/@eslint/plugin-kit/-/plugin-kit-0.4.1.tgz", { "dependencies": { "@eslint/core": "^0.17.0", "levn": "^0.4.1" } }, ""],
+
+    "@humanfs/core": ["@humanfs/core@0.19.1", "https://mirror2.chabokan.net/npm/@humanfs/core/-/core-0.19.1.tgz", {}, ""],
+
+    "@humanfs/node": ["@humanfs/node@0.16.7", "https://mirror2.chabokan.net/npm/@humanfs/node/-/node-0.16.7.tgz", { "dependencies": { "@humanfs/core": "^0.19.1", "@humanwhocodes/retry": "^0.4.0" } }, ""],
+
+    "@humanwhocodes/module-importer": ["@humanwhocodes/module-importer@1.0.1", "https://mirror2.chabokan.net/npm/@humanwhocodes/module-importer/-/module-importer-1.0.1.tgz", {}, ""],
+
+    "@humanwhocodes/retry": ["@humanwhocodes/retry@0.4.3", "https://mirror2.chabokan.net/npm/@humanwhocodes/retry/-/retry-0.4.3.tgz", {}, ""],
+
+    "@jridgewell/gen-mapping": ["@jridgewell/gen-mapping@0.3.13", "https://mirror2.chabokan.net/npm/@jridgewell/gen-mapping/-/gen-mapping-0.3.13.tgz", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.0", "@jridgewell/trace-mapping": "^0.3.24" } }, ""],
+
+    "@jridgewell/remapping": ["@jridgewell/remapping@2.3.5", "https://mirror2.chabokan.net/npm/@jridgewell/remapping/-/remapping-2.3.5.tgz", { "dependencies": { "@jridgewell/gen-mapping": "^0.3.5", "@jridgewell/trace-mapping": "^0.3.24" } }, ""],
+
+    "@jridgewell/resolve-uri": ["@jridgewell/resolve-uri@3.1.2", "https://mirror2.chabokan.net/npm/@jridgewell/resolve-uri/-/resolve-uri-3.1.2.tgz", {}, ""],
+
+    "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "https://mirror2.chabokan.net/npm/@jridgewell/sourcemap-codec/-/sourcemap-codec-1.5.5.tgz", {}, ""],
+
+    "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "https://mirror2.chabokan.net/npm/@jridgewell/trace-mapping/-/trace-mapping-0.3.31.tgz", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, ""],
+
+    "@libsql/client": ["@libsql/client@0.17.2", "https://mirror2.chabokan.net/npm/@libsql/client/-/client-0.17.2.tgz", { "dependencies": { "@libsql/core": "^0.17.2", "@libsql/hrana-client": "^0.9.0", "js-base64": "^3.7.5", "libsql": "^0.5.28", "promise-limit": "^2.7.0" } }, ""],
+
+    "@libsql/core": ["@libsql/core@0.17.2", "https://mirror2.chabokan.net/npm/@libsql/core/-/core-0.17.2.tgz", { "dependencies": { "js-base64": "^3.7.5" } }, ""],
+
+    "@libsql/hrana-client": ["@libsql/hrana-client@0.9.0", "https://mirror2.chabokan.net/npm/@libsql/hrana-client/-/hrana-client-0.9.0.tgz", { "dependencies": { "@libsql/isomorphic-ws": "^0.1.5", "cross-fetch": "^4.0.0", "js-base64": "^3.7.5", "node-fetch": "^3.3.2" } }, ""],
+
+    "@libsql/isomorphic-ws": ["@libsql/isomorphic-ws@0.1.5", "https://mirror2.chabokan.net/npm/@libsql/isomorphic-ws/-/isomorphic-ws-0.1.5.tgz", { "dependencies": { "@types/ws": "^8.5.4", "ws": "^8.13.0" } }, ""],
+
+    "@libsql/linux-x64-gnu": ["@libsql/linux-x64-gnu@0.5.29", "https://mirror2.chabokan.net/npm/@libsql/linux-x64-gnu/-/linux-x64-gnu-0.5.29.tgz", { "os": "linux", "cpu": "x64" }, ""],
+
+    "@libsql/linux-x64-musl": ["@libsql/linux-x64-musl@0.5.29", "https://mirror2.chabokan.net/npm/@libsql/linux-x64-musl/-/linux-x64-musl-0.5.29.tgz", { "os": "linux", "cpu": "x64" }, ""],
+
+    "@mdi/font": ["@mdi/font@7.4.47", "https://mirror2.chabokan.net/npm/@mdi/font/-/font-7.4.47.tgz", {}, ""],
+
+    "@neon-rs/load": ["@neon-rs/load@0.0.4", "https://mirror2.chabokan.net/npm/@neon-rs/load/-/load-0.0.4.tgz", {}, ""],
+
+    "@polka/url": ["@polka/url@1.0.0-next.29", "https://mirror2.chabokan.net/npm/@polka/url/-/url-1.0.0-next.29.tgz", {}, ""],
+
+    "@popperjs/core": ["@popperjs/core@2.11.8", "https://mirror2.chabokan.net/npm/@popperjs/core/-/core-2.11.8.tgz", {}, ""],
+
+    "@rollup/plugin-commonjs": ["@rollup/plugin-commonjs@29.0.2", "https://mirror2.chabokan.net/npm/@rollup/plugin-commonjs/-/plugin-commonjs-29.0.2.tgz", { "dependencies": { "@rollup/pluginutils": "^5.0.1", "commondir": "^1.0.1", "estree-walker": "^2.0.2", "fdir": "^6.2.0", "is-reference": "1.2.1", "magic-string": "^0.30.3", "picomatch": "^4.0.2" }, "peerDependencies": { "rollup": "^2.68.0||^3.0.0||^4.0.0" } }, ""],
+
+    "@rollup/plugin-json": ["@rollup/plugin-json@6.1.0", "https://mirror2.chabokan.net/npm/@rollup/plugin-json/-/plugin-json-6.1.0.tgz", { "dependencies": { "@rollup/pluginutils": "^5.1.0" }, "peerDependencies": { "rollup": "^1.20.0||^2.0.0||^3.0.0||^4.0.0" } }, ""],
+
+    "@rollup/plugin-node-resolve": ["@rollup/plugin-node-resolve@16.0.3", "https://mirror2.chabokan.net/npm/@rollup/plugin-node-resolve/-/plugin-node-resolve-16.0.3.tgz", { "dependencies": { "@rollup/pluginutils": "^5.0.1", "@types/resolve": "1.20.2", "deepmerge": "^4.2.2", "is-module": "^1.0.0", "resolve": "^1.22.1" }, "peerDependencies": { "rollup": "^2.78.0||^3.0.0||^4.0.0" } }, ""],
+
+    "@rollup/pluginutils": ["@rollup/pluginutils@5.3.0", "https://mirror2.chabokan.net/npm/@rollup/pluginutils/-/pluginutils-5.3.0.tgz", { "dependencies": { "@types/estree": "^1.0.0", "estree-walker": "^2.0.2", "picomatch": "^4.0.2" }, "peerDependencies": { "rollup": "^1.20.0||^2.0.0||^3.0.0||^4.0.0" } }, ""],
+
+    "@rollup/rollup-linux-x64-gnu": ["@rollup/rollup-linux-x64-gnu@4.60.1", "https://mirror2.chabokan.net/npm/@rollup/rollup-linux-x64-gnu/-/rollup-linux-x64-gnu-4.60.1.tgz", { "os": "linux", "cpu": "x64" }, ""],
+
+    "@rollup/rollup-linux-x64-musl": ["@rollup/rollup-linux-x64-musl@4.60.1", "https://mirror2.chabokan.net/npm/@rollup/rollup-linux-x64-musl/-/rollup-linux-x64-musl-4.60.1.tgz", { "os": "linux", "cpu": "x64" }, ""],
+
+    "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "https://mirror2.chabokan.net/npm/@standard-schema/spec/-/spec-1.1.0.tgz", {}, ""],
+
+    "@sveltejs/acorn-typescript": ["@sveltejs/acorn-typescript@1.0.9", "https://mirror2.chabokan.net/npm/@sveltejs/acorn-typescript/-/acorn-typescript-1.0.9.tgz", { "peerDependencies": { "acorn": "^8.9.0" } }, ""],
+
+    "@sveltejs/adapter-auto": ["@sveltejs/adapter-auto@4.0.0", "https://mirror2.chabokan.net/npm/@sveltejs/adapter-auto/-/adapter-auto-4.0.0.tgz", { "dependencies": { "import-meta-resolve": "^4.1.0" }, "peerDependencies": { "@sveltejs/kit": "^2.0.0" } }, ""],
+
+    "@sveltejs/adapter-node": ["@sveltejs/adapter-node@5.5.4", "https://mirror2.chabokan.net/npm/@sveltejs/adapter-node/-/adapter-node-5.5.4.tgz", { "dependencies": { "@rollup/plugin-commonjs": "^29.0.0", "@rollup/plugin-json": "^6.1.0", "@rollup/plugin-node-resolve": "^16.0.0", "rollup": "^4.59.0" }, "peerDependencies": { "@sveltejs/kit": "^2.4.0" } }, ""],
+
+    "@sveltejs/kit": ["@sveltejs/kit@2.56.1", "https://mirror2.chabokan.net/npm/@sveltejs/kit/-/kit-2.56.1.tgz", { "dependencies": { "@standard-schema/spec": "^1.0.0", "@sveltejs/acorn-typescript": "^1.0.5", "@types/cookie": "^0.6.0", "acorn": "^8.14.1", "cookie": "^0.6.0", "devalue": "^5.6.4", "esm-env": "^1.2.2", "kleur": "^4.1.5", "magic-string": "^0.30.5", "mrmime": "^2.0.0", "set-cookie-parser": "^3.0.0", "sirv": "^3.0.0" }, "peerDependencies": { "@opentelemetry/api": "^1.0.0", "@sveltejs/vite-plugin-svelte": "^3.0.0 || ^4.0.0-next.1 || ^5.0.0 || ^6.0.0-next.0 || ^7.0.0", "svelte": "^4.0.0 || ^5.0.0-next.0", "typescript": "^5.3.3 || ^6.0.0", "vite": "^5.0.3 || ^6.0.0 || ^7.0.0-beta.0 || ^8.0.0" }, "optionalPeers": ["@opentelemetry/api"], "bin": { "svelte-kit": "svelte-kit.js" } }, ""],
+
+    "@sveltejs/vite-plugin-svelte": ["@sveltejs/vite-plugin-svelte@5.1.1", "https://mirror2.chabokan.net/npm/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-5.1.1.tgz", { "dependencies": { "@sveltejs/vite-plugin-svelte-inspector": "^4.0.1", "debug": "^4.4.1", "deepmerge": "^4.3.1", "kleur": "^4.1.5", "magic-string": "^0.30.17", "vitefu": "^1.0.6" }, "peerDependencies": { "svelte": "^5.0.0", "vite": "^6.0.0" } }, ""],
+
+    "@sveltejs/vite-plugin-svelte-inspector": ["@sveltejs/vite-plugin-svelte-inspector@4.0.1", "https://mirror2.chabokan.net/npm/@sveltejs/vite-plugin-svelte-inspector/-/vite-plugin-svelte-inspector-4.0.1.tgz", { "dependencies": { "debug": "^4.3.7" }, "peerDependencies": { "@sveltejs/vite-plugin-svelte": "^5.0.0", "svelte": "^5.0.0", "vite": "^6.0.0" } }, ""],
+
+    "@tailwindcss/forms": ["@tailwindcss/forms@0.5.11", "https://mirror2.chabokan.net/npm/@tailwindcss/forms/-/forms-0.5.11.tgz", { "dependencies": { "mini-svg-data-uri": "^1.2.3" }, "peerDependencies": { "tailwindcss": ">=3.0.0 || >= 3.0.0-alpha.1 || >= 4.0.0-alpha.20 || >= 4.0.0-beta.1" } }, ""],
+
+    "@tailwindcss/node": ["@tailwindcss/node@4.2.2", "https://mirror2.chabokan.net/npm/@tailwindcss/node/-/node-4.2.2.tgz", { "dependencies": { "@jridgewell/remapping": "^2.3.5", "enhanced-resolve": "^5.19.0", "jiti": "^2.6.1", "lightningcss": "1.32.0", "magic-string": "^0.30.21", "source-map-js": "^1.2.1", "tailwindcss": "4.2.2" } }, ""],
+
+    "@tailwindcss/oxide": ["@tailwindcss/oxide@4.2.2", "https://mirror2.chabokan.net/npm/@tailwindcss/oxide/-/oxide-4.2.2.tgz", { "optionalDependencies": { "@tailwindcss/oxide-linux-x64-gnu": "4.2.2", "@tailwindcss/oxide-linux-x64-musl": "4.2.2" } }, ""],
+
+    "@tailwindcss/oxide-linux-x64-gnu": ["@tailwindcss/oxide-linux-x64-gnu@4.2.2", "https://mirror2.chabokan.net/npm/@tailwindcss/oxide-linux-x64-gnu/-/oxide-linux-x64-gnu-4.2.2.tgz", { "os": "linux", "cpu": "x64" }, ""],
+
+    "@tailwindcss/oxide-linux-x64-musl": ["@tailwindcss/oxide-linux-x64-musl@4.2.2", "https://mirror2.chabokan.net/npm/@tailwindcss/oxide-linux-x64-musl/-/oxide-linux-x64-musl-4.2.2.tgz", { "os": "linux", "cpu": "x64" }, ""],
+
+    "@tailwindcss/typography": ["@tailwindcss/typography@0.5.19", "https://mirror2.chabokan.net/npm/@tailwindcss/typography/-/typography-0.5.19.tgz", { "dependencies": { "postcss-selector-parser": "6.0.10" }, "peerDependencies": { "tailwindcss": ">=3.0.0 || insiders || >=4.0.0-alpha.20 || >=4.0.0-beta.1" } }, ""],
+
+    "@tailwindcss/vite": ["@tailwindcss/vite@4.2.2", "https://mirror2.chabokan.net/npm/@tailwindcss/vite/-/vite-4.2.2.tgz", { "dependencies": { "@tailwindcss/node": "4.2.2", "@tailwindcss/oxide": "4.2.2", "tailwindcss": "4.2.2" }, "peerDependencies": { "vite": "^5.2.0 || ^6 || ^7 || ^8" } }, ""],
+
+    "@types/cookie": ["@types/cookie@0.6.0", "https://mirror2.chabokan.net/npm/@types/cookie/-/cookie-0.6.0.tgz", {}, ""],
+
+    "@types/estree": ["@types/estree@1.0.8", "https://mirror2.chabokan.net/npm/@types/estree/-/estree-1.0.8.tgz", {}, ""],
+
+    "@types/json-schema": ["@types/json-schema@7.0.15", "https://mirror2.chabokan.net/npm/@types/json-schema/-/json-schema-7.0.15.tgz", {}, ""],
+
+    "@types/node": ["@types/node@25.5.2", "https://mirror2.chabokan.net/npm/@types/node/-/node-25.5.2.tgz", { "dependencies": { "undici-types": "~7.18.0" } }, ""],
+
+    "@types/qrcode": ["@types/qrcode@1.5.6", "https://mirror2.chabokan.net/npm/@types/qrcode/-/qrcode-1.5.6.tgz", { "dependencies": { "@types/node": "*" } }, ""],
+
+    "@types/resolve": ["@types/resolve@1.20.2", "https://mirror2.chabokan.net/npm/@types/resolve/-/resolve-1.20.2.tgz", {}, ""],
+
+    "@types/trusted-types": ["@types/trusted-types@2.0.7", "https://mirror2.chabokan.net/npm/@types/trusted-types/-/trusted-types-2.0.7.tgz", {}, ""],
+
+    "@types/ws": ["@types/ws@8.18.1", "https://mirror2.chabokan.net/npm/@types/ws/-/ws-8.18.1.tgz", { "dependencies": { "@types/node": "*" } }, ""],
+
+    "@typescript-eslint/eslint-plugin": ["@typescript-eslint/eslint-plugin@8.58.0", "https://mirror2.chabokan.net/npm/@typescript-eslint/eslint-plugin/-/eslint-plugin-8.58.0.tgz", { "dependencies": { "@eslint-community/regexpp": "^4.12.2", "@typescript-eslint/scope-manager": "8.58.0", "@typescript-eslint/type-utils": "8.58.0", "@typescript-eslint/utils": "8.58.0", "@typescript-eslint/visitor-keys": "8.58.0", "ignore": "^7.0.5", "natural-compare": "^1.4.0", "ts-api-utils": "^2.5.0" }, "peerDependencies": { "@typescript-eslint/parser": "^8.58.0", "eslint": "^8.57.0 || ^9.0.0 || ^10.0.0", "typescript": ">=4.8.4 <6.1.0" } }, ""],
+
+    "@typescript-eslint/parser": ["@typescript-eslint/parser@8.58.0", "https://mirror2.chabokan.net/npm/@typescript-eslint/parser/-/parser-8.58.0.tgz", { "dependencies": { "@typescript-eslint/scope-manager": "8.58.0", "@typescript-eslint/types": "8.58.0", "@typescript-eslint/typescript-estree": "8.58.0", "@typescript-eslint/visitor-keys": "8.58.0", "debug": "^4.4.3" }, "peerDependencies": { "eslint": "^8.57.0 || ^9.0.0 || ^10.0.0", "typescript": ">=4.8.4 <6.1.0" } }, ""],
+
+    "@typescript-eslint/project-service": ["@typescript-eslint/project-service@8.58.0", "https://mirror2.chabokan.net/npm/@typescript-eslint/project-service/-/project-service-8.58.0.tgz", { "dependencies": { "@typescript-eslint/tsconfig-utils": "^8.58.0", "@typescript-eslint/types": "^8.58.0", "debug": "^4.4.3" }, "peerDependencies": { "typescript": ">=4.8.4 <6.1.0" } }, ""],
+
+    "@typescript-eslint/scope-manager": ["@typescript-eslint/scope-manager@8.58.0", "https://mirror2.chabokan.net/npm/@typescript-eslint/scope-manager/-/scope-manager-8.58.0.tgz", { "dependencies": { "@typescript-eslint/types": "8.58.0", "@typescript-eslint/visitor-keys": "8.58.0" } }, ""],
+
+    "@typescript-eslint/tsconfig-utils": ["@typescript-eslint/tsconfig-utils@8.58.0", "https://mirror2.chabokan.net/npm/@typescript-eslint/tsconfig-utils/-/tsconfig-utils-8.58.0.tgz", { "peerDependencies": { "typescript": ">=4.8.4 <6.1.0" } }, ""],
+
+    "@typescript-eslint/type-utils": ["@typescript-eslint/type-utils@8.58.0", "https://mirror2.chabokan.net/npm/@typescript-eslint/type-utils/-/type-utils-8.58.0.tgz", { "dependencies": { "@typescript-eslint/types": "8.58.0", "@typescript-eslint/typescript-estree": "8.58.0", "@typescript-eslint/utils": "8.58.0", "debug": "^4.4.3", "ts-api-utils": "^2.5.0" }, "peerDependencies": { "eslint": "^8.57.0 || ^9.0.0 || ^10.0.0", "typescript": ">=4.8.4 <6.1.0" } }, ""],
+
+    "@typescript-eslint/types": ["@typescript-eslint/types@8.58.0", "https://mirror2.chabokan.net/npm/@typescript-eslint/types/-/types-8.58.0.tgz", {}, ""],
+
+    "@typescript-eslint/typescript-estree": ["@typescript-eslint/typescript-estree@8.58.0", "https://mirror2.chabokan.net/npm/@typescript-eslint/typescript-estree/-/typescript-estree-8.58.0.tgz", { "dependencies": { "@typescript-eslint/project-service": "8.58.0", "@typescript-eslint/tsconfig-utils": "8.58.0", "@typescript-eslint/types": "8.58.0", "@typescript-eslint/visitor-keys": "8.58.0", "debug": "^4.4.3", "minimatch": "^10.2.2", "semver": "^7.7.3", "tinyglobby": "^0.2.15", "ts-api-utils": "^2.5.0" }, "peerDependencies": { "typescript": ">=4.8.4 <6.1.0" } }, ""],
+
+    "@typescript-eslint/utils": ["@typescript-eslint/utils@8.58.0", "https://mirror2.chabokan.net/npm/@typescript-eslint/utils/-/utils-8.58.0.tgz", { "dependencies": { "@eslint-community/eslint-utils": "^4.9.1", "@typescript-eslint/scope-manager": "8.58.0", "@typescript-eslint/types": "8.58.0", "@typescript-eslint/typescript-estree": "8.58.0" }, "peerDependencies": { "eslint": "^8.57.0 || ^9.0.0 || ^10.0.0", "typescript": ">=4.8.4 <6.1.0" } }, ""],
+
+    "@typescript-eslint/visitor-keys": ["@typescript-eslint/visitor-keys@8.58.0", "https://mirror2.chabokan.net/npm/@typescript-eslint/visitor-keys/-/visitor-keys-8.58.0.tgz", { "dependencies": { "@typescript-eslint/types": "8.58.0", "eslint-visitor-keys": "^5.0.0" } }, ""],
+
+    "acorn": ["acorn@8.16.0", "https://mirror2.chabokan.net/npm/acorn/-/acorn-8.16.0.tgz", { "bin": "bin/acorn" }, ""],
+
+    "acorn-jsx": ["acorn-jsx@5.3.2", "https://mirror2.chabokan.net/npm/acorn-jsx/-/acorn-jsx-5.3.2.tgz", { "peerDependencies": { "acorn": "^6.0.0 || ^7.0.0 || ^8.0.0" } }, ""],
+
+    "ajv": ["ajv@6.14.0", "https://mirror2.chabokan.net/npm/ajv/-/ajv-6.14.0.tgz", { "dependencies": { "fast-deep-equal": "^3.1.1", "fast-json-stable-stringify": "^2.0.0", "json-schema-traverse": "^0.4.1", "uri-js": "^4.2.2" } }, ""],
+
+    "ansi-regex": ["ansi-regex@5.0.1", "https://mirror2.chabokan.net/npm/ansi-regex/-/ansi-regex-5.0.1.tgz", {}, ""],
+
+    "ansi-styles": ["ansi-styles@4.3.0", "https://mirror2.chabokan.net/npm/ansi-styles/-/ansi-styles-4.3.0.tgz", { "dependencies": { "color-convert": "^2.0.1" } }, ""],
+
+    "argparse": ["argparse@2.0.1", "https://mirror2.chabokan.net/npm/argparse/-/argparse-2.0.1.tgz", {}, ""],
+
+    "aria-query": ["aria-query@5.3.1", "https://mirror2.chabokan.net/npm/aria-query/-/aria-query-5.3.1.tgz", {}, ""],
+
+    "axobject-query": ["axobject-query@4.1.0", "https://mirror2.chabokan.net/npm/axobject-query/-/axobject-query-4.1.0.tgz", {}, ""],
+
+    "balanced-match": ["balanced-match@1.0.2", "https://mirror2.chabokan.net/npm/balanced-match/-/balanced-match-1.0.2.tgz", {}, ""],
+
+    "brace-expansion": ["brace-expansion@1.1.13", "https://mirror2.chabokan.net/npm/brace-expansion/-/brace-expansion-1.1.13.tgz", { "dependencies": { "balanced-match": "^1.0.0", "concat-map": "0.0.1" } }, ""],
+
+    "callsites": ["callsites@3.1.0", "https://mirror2.chabokan.net/npm/callsites/-/callsites-3.1.0.tgz", {}, ""],
+
+    "camelcase": ["camelcase@5.3.1", "https://mirror2.chabokan.net/npm/camelcase/-/camelcase-5.3.1.tgz", {}, ""],
+
+    "chalk": ["chalk@5.6.2", "https://mirror2.chabokan.net/npm/chalk/-/chalk-5.6.2.tgz", {}, ""],
+
+    "chokidar": ["chokidar@4.0.3", "https://mirror2.chabokan.net/npm/chokidar/-/chokidar-4.0.3.tgz", { "dependencies": { "readdirp": "^4.0.1" } }, ""],
+
+    "cliui": ["cliui@6.0.0", "https://mirror2.chabokan.net/npm/cliui/-/cliui-6.0.0.tgz", { "dependencies": { "string-width": "^4.2.0", "strip-ansi": "^6.0.0", "wrap-ansi": "^6.2.0" } }, ""],
+
+    "clsx": ["clsx@2.1.1", "https://mirror2.chabokan.net/npm/clsx/-/clsx-2.1.1.tgz", {}, ""],
+
+    "color-convert": ["color-convert@2.0.1", "https://mirror2.chabokan.net/npm/color-convert/-/color-convert-2.0.1.tgz", { "dependencies": { "color-name": "~1.1.4" } }, ""],
+
+    "color-name": ["color-name@1.1.4", "https://mirror2.chabokan.net/npm/color-name/-/color-name-1.1.4.tgz", {}, ""],
+
+    "commondir": ["commondir@1.0.1", "https://mirror2.chabokan.net/npm/commondir/-/commondir-1.0.1.tgz", {}, ""],
+
+    "concat-map": ["concat-map@0.0.1", "https://mirror2.chabokan.net/npm/concat-map/-/concat-map-0.0.1.tgz", {}, ""],
+
+    "cookie": ["cookie@0.6.0", "https://mirror2.chabokan.net/npm/cookie/-/cookie-0.6.0.tgz", {}, ""],
+
+    "cross-fetch": ["cross-fetch@4.1.0", "https://mirror2.chabokan.net/npm/cross-fetch/-/cross-fetch-4.1.0.tgz", { "dependencies": { "node-fetch": "^2.7.0" } }, ""],
+
+    "cross-spawn": ["cross-spawn@7.0.6", "https://mirror2.chabokan.net/npm/cross-spawn/-/cross-spawn-7.0.6.tgz", { "dependencies": { "path-key": "^3.1.0", "shebang-command": "^2.0.0", "which": "^2.0.1" } }, ""],
+
+    "cssesc": ["cssesc@3.0.0", "https://mirror2.chabokan.net/npm/cssesc/-/cssesc-3.0.0.tgz", { "bin": "bin/cssesc" }, ""],
+
+    "data-uri-to-buffer": ["data-uri-to-buffer@4.0.1", "https://mirror2.chabokan.net/npm/data-uri-to-buffer/-/data-uri-to-buffer-4.0.1.tgz", {}, ""],
+
+    "debug": ["debug@4.4.3", "https://mirror2.chabokan.net/npm/debug/-/debug-4.4.3.tgz", { "dependencies": { "ms": "^2.1.3" } }, ""],
+
+    "decamelize": ["decamelize@1.2.0", "https://mirror2.chabokan.net/npm/decamelize/-/decamelize-1.2.0.tgz", {}, ""],
+
+    "deep-is": ["deep-is@0.1.4", "https://mirror2.chabokan.net/npm/deep-is/-/deep-is-0.1.4.tgz", {}, ""],
+
+    "deepmerge": ["deepmerge@4.3.1", "https://mirror2.chabokan.net/npm/deepmerge/-/deepmerge-4.3.1.tgz", {}, ""],
+
+    "detect-libc": ["detect-libc@2.1.2", "https://mirror2.chabokan.net/npm/detect-libc/-/detect-libc-2.1.2.tgz", {}, ""],
+
+    "devalue": ["devalue@5.6.4", "https://mirror2.chabokan.net/npm/devalue/-/devalue-5.6.4.tgz", {}, ""],
+
+    "dijkstrajs": ["dijkstrajs@1.0.3", "https://mirror2.chabokan.net/npm/dijkstrajs/-/dijkstrajs-1.0.3.tgz", {}, ""],
+
+    "emoji-regex": ["emoji-regex@8.0.0", "https://mirror2.chabokan.net/npm/emoji-regex/-/emoji-regex-8.0.0.tgz", {}, ""],
+
+    "enhanced-resolve": ["enhanced-resolve@5.20.1", "https://mirror2.chabokan.net/npm/enhanced-resolve/-/enhanced-resolve-5.20.1.tgz", { "dependencies": { "graceful-fs": "^4.2.4", "tapable": "^2.3.0" } }, ""],
+
+    "es-errors": ["es-errors@1.3.0", "https://mirror2.chabokan.net/npm/es-errors/-/es-errors-1.3.0.tgz", {}, ""],
+
+    "esbuild": ["esbuild@0.25.12", "https://mirror2.chabokan.net/npm/esbuild/-/esbuild-0.25.12.tgz", { "optionalDependencies": { "@esbuild/linux-x64": "0.25.12" }, "bin": "bin/esbuild" }, ""],
+
+    "escape-string-regexp": ["escape-string-regexp@4.0.0", "https://mirror2.chabokan.net/npm/escape-string-regexp/-/escape-string-regexp-4.0.0.tgz", {}, ""],
+
+    "eslint": ["eslint@9.39.4", "https://mirror2.chabokan.net/npm/eslint/-/eslint-9.39.4.tgz", { "dependencies": { "@eslint-community/eslint-utils": "^4.8.0", "@eslint-community/regexpp": "^4.12.1", "@eslint/config-array": "^0.21.2", "@eslint/config-helpers": "^0.4.2", "@eslint/core": "^0.17.0", "@eslint/eslintrc": "^3.3.5", "@eslint/js": "9.39.4", "@eslint/plugin-kit": "^0.4.1", "@humanfs/node": "^0.16.6", "@humanwhocodes/module-importer": "^1.0.1", "@humanwhocodes/retry": "^0.4.2", "@types/estree": "^1.0.6", "ajv": "^6.14.0", "chalk": "^4.0.0", "cross-spawn": "^7.0.6", "debug": "^4.3.2", "escape-string-regexp": "^4.0.0", "eslint-scope": "^8.4.0", "eslint-visitor-keys": "^4.2.1", "espree": "^10.4.0", "esquery": "^1.5.0", "esutils": "^2.0.2", "fast-deep-equal": "^3.1.3", "file-entry-cache": "^8.0.0", "find-up": "^5.0.0", "glob-parent": "^6.0.2", "ignore": "^5.2.0", "imurmurhash": "^0.1.4", "is-glob": "^4.0.0", "json-stable-stringify-without-jsonify": "^1.0.1", "lodash.merge": "^4.6.2", "minimatch": "^3.1.5", "natural-compare": "^1.4.0", "optionator": "^0.9.3" }, "peerDependencies": { "jiti": "*" }, "bin": "bin/eslint.js" }, ""],
+
+    "eslint-config-prettier": ["eslint-config-prettier@10.1.8", "https://mirror2.chabokan.net/npm/eslint-config-prettier/-/eslint-config-prettier-10.1.8.tgz", { "peerDependencies": { "eslint": ">=7.0.0" }, "bin": "bin/cli.js" }, ""],
+
+    "eslint-plugin-svelte": ["eslint-plugin-svelte@3.16.0", "https://mirror2.chabokan.net/npm/eslint-plugin-svelte/-/eslint-plugin-svelte-3.16.0.tgz", { "dependencies": { "@eslint-community/eslint-utils": "^4.6.1", "@jridgewell/sourcemap-codec": "^1.5.0", "esutils": "^2.0.3", "globals": "^16.0.0", "known-css-properties": "^0.37.0", "postcss": "^8.4.49", "postcss-load-config": "^3.1.4", "postcss-safe-parser": "^7.0.0", "semver": "^7.6.3", "svelte-eslint-parser": "^1.4.0" }, "peerDependencies": { "eslint": "^8.57.1 || ^9.0.0 || ^10.0.0", "svelte": "^3.37.0 || ^4.0.0 || ^5.0.0" } }, ""],
+
+    "eslint-scope": ["eslint-scope@8.4.0", "https://mirror2.chabokan.net/npm/eslint-scope/-/eslint-scope-8.4.0.tgz", { "dependencies": { "esrecurse": "^4.3.0", "estraverse": "^5.2.0" } }, ""],
+
+    "eslint-visitor-keys": ["eslint-visitor-keys@4.2.1", "https://mirror2.chabokan.net/npm/eslint-visitor-keys/-/eslint-visitor-keys-4.2.1.tgz", {}, ""],
+
+    "esm-env": ["esm-env@1.2.2", "https://mirror2.chabokan.net/npm/esm-env/-/esm-env-1.2.2.tgz", {}, ""],
+
+    "espree": ["espree@10.4.0", "https://mirror2.chabokan.net/npm/espree/-/espree-10.4.0.tgz", { "dependencies": { "acorn": "^8.15.0", "acorn-jsx": "^5.3.2", "eslint-visitor-keys": "^4.2.1" } }, ""],
+
+    "esquery": ["esquery@1.7.0", "https://mirror2.chabokan.net/npm/esquery/-/esquery-1.7.0.tgz", { "dependencies": { "estraverse": "^5.1.0" } }, ""],
+
+    "esrap": ["esrap@2.2.4", "https://mirror2.chabokan.net/npm/esrap/-/esrap-2.2.4.tgz", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.4.15", "@typescript-eslint/types": "^8.2.0" } }, ""],
+
+    "esrecurse": ["esrecurse@4.3.0", "https://mirror2.chabokan.net/npm/esrecurse/-/esrecurse-4.3.0.tgz", { "dependencies": { "estraverse": "^5.2.0" } }, ""],
+
+    "estraverse": ["estraverse@5.3.0", "https://mirror2.chabokan.net/npm/estraverse/-/estraverse-5.3.0.tgz", {}, ""],
+
+    "estree-walker": ["estree-walker@2.0.2", "https://mirror2.chabokan.net/npm/estree-walker/-/estree-walker-2.0.2.tgz", {}, ""],
+
+    "esutils": ["esutils@2.0.3", "https://mirror2.chabokan.net/npm/esutils/-/esutils-2.0.3.tgz", {}, ""],
+
+    "fast-deep-equal": ["fast-deep-equal@3.1.3", "https://mirror2.chabokan.net/npm/fast-deep-equal/-/fast-deep-equal-3.1.3.tgz", {}, ""],
+
+    "fast-json-stable-stringify": ["fast-json-stable-stringify@2.1.0", "https://mirror2.chabokan.net/npm/fast-json-stable-stringify/-/fast-json-stable-stringify-2.1.0.tgz", {}, ""],
+
+    "fast-levenshtein": ["fast-levenshtein@2.0.6", "https://mirror2.chabokan.net/npm/fast-levenshtein/-/fast-levenshtein-2.0.6.tgz", {}, ""],
+
+    "fdir": ["fdir@6.5.0", "https://mirror2.chabokan.net/npm/fdir/-/fdir-6.5.0.tgz", { "peerDependencies": { "picomatch": "^3 || ^4" } }, ""],
+
+    "fetch-blob": ["fetch-blob@3.2.0", "https://mirror2.chabokan.net/npm/fetch-blob/-/fetch-blob-3.2.0.tgz", { "dependencies": { "node-domexception": "^1.0.0", "web-streams-polyfill": "^3.0.3" } }, ""],
+
+    "file-entry-cache": ["file-entry-cache@8.0.0", "https://mirror2.chabokan.net/npm/file-entry-cache/-/file-entry-cache-8.0.0.tgz", { "dependencies": { "flat-cache": "^4.0.0" } }, ""],
+
+    "find-up": ["find-up@5.0.0", "https://mirror2.chabokan.net/npm/find-up/-/find-up-5.0.0.tgz", { "dependencies": { "locate-path": "^6.0.0", "path-exists": "^4.0.0" } }, ""],
+
+    "flat-cache": ["flat-cache@4.0.1", "https://mirror2.chabokan.net/npm/flat-cache/-/flat-cache-4.0.1.tgz", { "dependencies": { "flatted": "^3.2.9", "keyv": "^4.5.4" } }, ""],
+
+    "flatted": ["flatted@3.4.2", "https://mirror2.chabokan.net/npm/flatted/-/flatted-3.4.2.tgz", {}, ""],
+
+    "formdata-polyfill": ["formdata-polyfill@4.0.10", "https://mirror2.chabokan.net/npm/formdata-polyfill/-/formdata-polyfill-4.0.10.tgz", { "dependencies": { "fetch-blob": "^3.1.2" } }, ""],
+
+    "fsevents": ["fsevents@2.3.3", "https://mirror2.chabokan.net/npm/fsevents/-/fsevents-2.3.3.tgz", { "os": "darwin" }, "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw=="],
+
+    "function-bind": ["function-bind@1.1.2", "https://mirror2.chabokan.net/npm/function-bind/-/function-bind-1.1.2.tgz", {}, ""],
+
+    "get-caller-file": ["get-caller-file@2.0.5", "https://mirror2.chabokan.net/npm/get-caller-file/-/get-caller-file-2.0.5.tgz", {}, ""],
+
+    "glob-parent": ["glob-parent@6.0.2", "https://mirror2.chabokan.net/npm/glob-parent/-/glob-parent-6.0.2.tgz", { "dependencies": { "is-glob": "^4.0.3" } }, ""],
+
+    "globals": ["globals@16.5.0", "https://mirror2.chabokan.net/npm/globals/-/globals-16.5.0.tgz", {}, ""],
+
+    "graceful-fs": ["graceful-fs@4.2.11", "https://mirror2.chabokan.net/npm/graceful-fs/-/graceful-fs-4.2.11.tgz", {}, ""],
+
+    "has-flag": ["has-flag@4.0.0", "https://mirror2.chabokan.net/npm/has-flag/-/has-flag-4.0.0.tgz", {}, ""],
+
+    "hasown": ["hasown@2.0.3", "https://mirror2.chabokan.net/npm/hasown/-/hasown-2.0.3.tgz", { "dependencies": { "function-bind": "^1.1.2" } }, ""],
+
+    "ignore": ["ignore@5.3.2", "https://mirror2.chabokan.net/npm/ignore/-/ignore-5.3.2.tgz", {}, ""],
+
+    "import-fresh": ["import-fresh@3.3.1", "https://mirror2.chabokan.net/npm/import-fresh/-/import-fresh-3.3.1.tgz", { "dependencies": { "parent-module": "^1.0.0", "resolve-from": "^4.0.0" } }, ""],
+
+    "import-meta-resolve": ["import-meta-resolve@4.2.0", "https://mirror2.chabokan.net/npm/import-meta-resolve/-/import-meta-resolve-4.2.0.tgz", {}, ""],
+
+    "imurmurhash": ["imurmurhash@0.1.4", "https://mirror2.chabokan.net/npm/imurmurhash/-/imurmurhash-0.1.4.tgz", {}, ""],
+
+    "is-core-module": ["is-core-module@2.16.1", "https://mirror2.chabokan.net/npm/is-core-module/-/is-core-module-2.16.1.tgz", { "dependencies": { "hasown": "^2.0.2" } }, ""],
+
+    "is-extglob": ["is-extglob@2.1.1", "https://mirror2.chabokan.net/npm/is-extglob/-/is-extglob-2.1.1.tgz", {}, ""],
+
+    "is-fullwidth-code-point": ["is-fullwidth-code-point@3.0.0", "https://mirror2.chabokan.net/npm/is-fullwidth-code-point/-/is-fullwidth-code-point-3.0.0.tgz", {}, ""],
+
+    "is-glob": ["is-glob@4.0.3", "https://mirror2.chabokan.net/npm/is-glob/-/is-glob-4.0.3.tgz", { "dependencies": { "is-extglob": "^2.1.1" } }, ""],
+
+    "is-module": ["is-module@1.0.0", "https://mirror2.chabokan.net/npm/is-module/-/is-module-1.0.0.tgz", {}, ""],
+
+    "is-reference": ["is-reference@3.0.3", "https://mirror2.chabokan.net/npm/is-reference/-/is-reference-3.0.3.tgz", { "dependencies": { "@types/estree": "^1.0.6" } }, ""],
+
+    "isexe": ["isexe@2.0.0", "https://mirror2.chabokan.net/npm/isexe/-/isexe-2.0.0.tgz", {}, ""],
+
+    "jiti": ["jiti@2.6.1", "https://mirror2.chabokan.net/npm/jiti/-/jiti-2.6.1.tgz", { "bin": "lib/jiti-cli.mjs" }, ""],
+
+    "js-base64": ["js-base64@3.7.8", "https://mirror2.chabokan.net/npm/js-base64/-/js-base64-3.7.8.tgz", {}, ""],
+
+    "js-yaml": ["js-yaml@4.1.1", "https://mirror2.chabokan.net/npm/js-yaml/-/js-yaml-4.1.1.tgz", { "dependencies": { "argparse": "^2.0.1" }, "bin": "bin/js-yaml.js" }, ""],
+
+    "json-buffer": ["json-buffer@3.0.1", "https://mirror2.chabokan.net/npm/json-buffer/-/json-buffer-3.0.1.tgz", {}, ""],
+
+    "json-schema-traverse": ["json-schema-traverse@0.4.1", "https://mirror2.chabokan.net/npm/json-schema-traverse/-/json-schema-traverse-0.4.1.tgz", {}, ""],
+
+    "json-stable-stringify-without-jsonify": ["json-stable-stringify-without-jsonify@1.0.1", "https://mirror2.chabokan.net/npm/json-stable-stringify-without-jsonify/-/json-stable-stringify-without-jsonify-1.0.1.tgz", {}, ""],
+
+    "keyv": ["keyv@4.5.4", "https://mirror2.chabokan.net/npm/keyv/-/keyv-4.5.4.tgz", { "dependencies": { "json-buffer": "3.0.1" } }, ""],
+
+    "kleur": ["kleur@4.1.5", "https://mirror2.chabokan.net/npm/kleur/-/kleur-4.1.5.tgz", {}, ""],
+
+    "known-css-properties": ["known-css-properties@0.37.0", "https://mirror2.chabokan.net/npm/known-css-properties/-/known-css-properties-0.37.0.tgz", {}, ""],
+
+    "levn": ["levn@0.4.1", "https://mirror2.chabokan.net/npm/levn/-/levn-0.4.1.tgz", { "dependencies": { "prelude-ls": "^1.2.1", "type-check": "~0.4.0" } }, ""],
+
+    "libsql": ["libsql@0.5.29", "https://mirror2.chabokan.net/npm/libsql/-/libsql-0.5.29.tgz", { "dependencies": { "@neon-rs/load": "^0.0.4", "detect-libc": "2.0.2" }, "optionalDependencies": { "@libsql/linux-x64-gnu": "0.5.29", "@libsql/linux-x64-musl": "0.5.29" }, "os": [ "linux", "win32", "darwin", ], "cpu": [ "arm", "x64", "arm64", ] }, ""],
+
+    "lightningcss": ["lightningcss@1.32.0", "https://mirror2.chabokan.net/npm/lightningcss/-/lightningcss-1.32.0.tgz", { "dependencies": { "detect-libc": "^2.0.3" }, "optionalDependencies": { "lightningcss-linux-x64-gnu": "1.32.0", "lightningcss-linux-x64-musl": "1.32.0" } }, ""],
+
+    "lightningcss-linux-x64-gnu": ["lightningcss-linux-x64-gnu@1.32.0", "https://mirror2.chabokan.net/npm/lightningcss-linux-x64-gnu/-/lightningcss-linux-x64-gnu-1.32.0.tgz", { "os": "linux", "cpu": "x64" }, ""],
+
+    "lightningcss-linux-x64-musl": ["lightningcss-linux-x64-musl@1.32.0", "https://mirror2.chabokan.net/npm/lightningcss-linux-x64-musl/-/lightningcss-linux-x64-musl-1.32.0.tgz", { "os": "linux", "cpu": "x64" }, ""],
+
+    "lilconfig": ["lilconfig@2.1.0", "https://mirror2.chabokan.net/npm/lilconfig/-/lilconfig-2.1.0.tgz", {}, ""],
+
+    "locate-character": ["locate-character@3.0.0", "https://mirror2.chabokan.net/npm/locate-character/-/locate-character-3.0.0.tgz", {}, ""],
+
+    "locate-path": ["locate-path@6.0.0", "https://mirror2.chabokan.net/npm/locate-path/-/locate-path-6.0.0.tgz", { "dependencies": { "p-locate": "^5.0.0" } }, ""],
+
+    "lodash.merge": ["lodash.merge@4.6.2", "https://mirror2.chabokan.net/npm/lodash.merge/-/lodash.merge-4.6.2.tgz", {}, ""],
+
+    "magic-string": ["magic-string@0.30.21", "https://mirror2.chabokan.net/npm/magic-string/-/magic-string-0.30.21.tgz", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.5" } }, ""],
+
+    "mini-svg-data-uri": ["mini-svg-data-uri@1.4.4", "https://mirror2.chabokan.net/npm/mini-svg-data-uri/-/mini-svg-data-uri-1.4.4.tgz", { "bin": "cli.js" }, ""],
+
+    "minimatch": ["minimatch@3.1.5", "https://mirror2.chabokan.net/npm/minimatch/-/minimatch-3.1.5.tgz", { "dependencies": { "brace-expansion": "^1.1.7" } }, ""],
+
+    "mri": ["mri@1.2.0", "https://mirror2.chabokan.net/npm/mri/-/mri-1.2.0.tgz", {}, ""],
+
+    "mrmime": ["mrmime@2.0.1", "https://mirror2.chabokan.net/npm/mrmime/-/mrmime-2.0.1.tgz", {}, ""],
+
+    "ms": ["ms@2.1.3", "https://mirror2.chabokan.net/npm/ms/-/ms-2.1.3.tgz", {}, ""],
+
+    "nanoid": ["nanoid@3.3.11", "https://mirror2.chabokan.net/npm/nanoid/-/nanoid-3.3.11.tgz", { "bin": "bin/nanoid.cjs" }, ""],
+
+    "natural-compare": ["natural-compare@1.4.0", "https://mirror2.chabokan.net/npm/natural-compare/-/natural-compare-1.4.0.tgz", {}, ""],
+
+    "node-domexception": ["node-domexception@1.0.0", "https://mirror2.chabokan.net/npm/node-domexception/-/node-domexception-1.0.0.tgz", {}, ""],
+
+    "node-fetch": ["node-fetch@3.3.2", "https://mirror2.chabokan.net/npm/node-fetch/-/node-fetch-3.3.2.tgz", { "dependencies": { "data-uri-to-buffer": "^4.0.0", "fetch-blob": "^3.1.4", "formdata-polyfill": "^4.0.10" } }, ""],
+
+    "optionator": ["optionator@0.9.4", "https://mirror2.chabokan.net/npm/optionator/-/optionator-0.9.4.tgz", { "dependencies": { "deep-is": "^0.1.3", "fast-levenshtein": "^2.0.6", "levn": "^0.4.1", "prelude-ls": "^1.2.1", "type-check": "^0.4.0", "word-wrap": "^1.2.5" } }, ""],
+
+    "p-limit": ["p-limit@3.1.0", "https://mirror2.chabokan.net/npm/p-limit/-/p-limit-3.1.0.tgz", { "dependencies": { "yocto-queue": "^0.1.0" } }, ""],
+
+    "p-locate": ["p-locate@5.0.0", "https://mirror2.chabokan.net/npm/p-locate/-/p-locate-5.0.0.tgz", { "dependencies": { "p-limit": "^3.0.2" } }, ""],
+
+    "p-try": ["p-try@2.2.0", "https://mirror2.chabokan.net/npm/p-try/-/p-try-2.2.0.tgz", {}, ""],
+
+    "parent-module": ["parent-module@1.0.1", "https://mirror2.chabokan.net/npm/parent-module/-/parent-module-1.0.1.tgz", { "dependencies": { "callsites": "^3.0.0" } }, ""],
+
+    "path-exists": ["path-exists@4.0.0", "https://mirror2.chabokan.net/npm/path-exists/-/path-exists-4.0.0.tgz", {}, ""],
+
+    "path-key": ["path-key@3.1.1", "https://mirror2.chabokan.net/npm/path-key/-/path-key-3.1.1.tgz", {}, ""],
+
+    "path-parse": ["path-parse@1.0.7", "https://mirror2.chabokan.net/npm/path-parse/-/path-parse-1.0.7.tgz", {}, ""],
+
+    "picocolors": ["picocolors@1.1.1", "https://mirror2.chabokan.net/npm/picocolors/-/picocolors-1.1.1.tgz", {}, ""],
+
+    "picomatch": ["picomatch@4.0.4", "https://mirror2.chabokan.net/npm/picomatch/-/picomatch-4.0.4.tgz", {}, ""],
+
+    "pngjs": ["pngjs@5.0.0", "https://mirror2.chabokan.net/npm/pngjs/-/pngjs-5.0.0.tgz", {}, ""],
+
+    "postcss": ["postcss@8.5.8", "https://mirror2.chabokan.net/npm/postcss/-/postcss-8.5.8.tgz", { "dependencies": { "nanoid": "^3.3.11", "picocolors": "^1.1.1", "source-map-js": "^1.2.1" } }, ""],
+
+    "postcss-load-config": ["postcss-load-config@3.1.4", "https://mirror2.chabokan.net/npm/postcss-load-config/-/postcss-load-config-3.1.4.tgz", { "dependencies": { "lilconfig": "^2.0.5", "yaml": "^1.10.2" }, "peerDependencies": { "postcss": ">=8.0.9", "ts-node": ">=9.0.0" }, "optionalPeers": ["ts-node"] }, ""],
+
+    "postcss-safe-parser": ["postcss-safe-parser@7.0.1", "https://mirror2.chabokan.net/npm/postcss-safe-parser/-/postcss-safe-parser-7.0.1.tgz", { "peerDependencies": { "postcss": "^8.4.31" } }, ""],
+
+    "postcss-scss": ["postcss-scss@4.0.9", "https://mirror2.chabokan.net/npm/postcss-scss/-/postcss-scss-4.0.9.tgz", { "peerDependencies": { "postcss": "^8.4.29" } }, ""],
+
+    "postcss-selector-parser": ["postcss-selector-parser@6.0.10", "https://mirror2.chabokan.net/npm/postcss-selector-parser/-/postcss-selector-parser-6.0.10.tgz", { "dependencies": { "cssesc": "^3.0.0", "util-deprecate": "^1.0.2" } }, ""],
+
+    "prelude-ls": ["prelude-ls@1.2.1", "https://mirror2.chabokan.net/npm/prelude-ls/-/prelude-ls-1.2.1.tgz", {}, ""],
+
+    "prettier": ["prettier@3.8.1", "https://mirror2.chabokan.net/npm/prettier/-/prettier-3.8.1.tgz", { "bin": "bin/prettier.cjs" }, ""],
+
+    "prettier-plugin-svelte": ["prettier-plugin-svelte@3.5.1", "https://mirror2.chabokan.net/npm/prettier-plugin-svelte/-/prettier-plugin-svelte-3.5.1.tgz", { "peerDependencies": { "prettier": "^3.0.0", "svelte": "^3.2.0 || ^4.0.0-next.0 || ^5.0.0-next.0" } }, ""],
+
+    "prettier-plugin-tailwindcss": ["prettier-plugin-tailwindcss@0.6.14", "https://mirror2.chabokan.net/npm/prettier-plugin-tailwindcss/-/prettier-plugin-tailwindcss-0.6.14.tgz", { "peerDependencies": { "@ianvs/prettier-plugin-sort-imports": "*", "@prettier/plugin-hermes": "*", "@prettier/plugin-oxc": "*", "@prettier/plugin-pug": "*", "@shopify/prettier-plugin-liquid": "*", "@trivago/prettier-plugin-sort-imports": "*", "@zackad/prettier-plugin-twig": "*", "prettier": "^3.0", "prettier-plugin-astro": "*", "prettier-plugin-css-order": "*", "prettier-plugin-import-sort": "*", "prettier-plugin-jsdoc": "*", "prettier-plugin-marko": "*", "prettier-plugin-multiline-arrays": "*", "prettier-plugin-organize-attributes": "*", "prettier-plugin-organize-imports": "*", "prettier-plugin-sort-imports": "*", "prettier-plugin-style-order": "*", "prettier-plugin-svelte": "*" }, "optionalPeers": ["@ianvs/prettier-plugin-sort-imports", "@prettier/plugin-hermes", "@prettier/plugin-oxc", "@prettier/plugin-pug", "@shopify/prettier-plugin-liquid", "@trivago/prettier-plugin-sort-imports", "@zackad/prettier-plugin-twig", "prettier-plugin-astro", "prettier-plugin-css-order", "prettier-plugin-import-sort", "prettier-plugin-jsdoc", "prettier-plugin-marko", "prettier-plugin-multiline-arrays", "prettier-plugin-organize-attributes", "prettier-plugin-organize-imports", "prettier-plugin-sort-imports", "prettier-plugin-style-order"] }, ""],
+
+    "promise-limit": ["promise-limit@2.7.0", "https://mirror2.chabokan.net/npm/promise-limit/-/promise-limit-2.7.0.tgz", {}, ""],
+
+    "punycode": ["punycode@2.3.1", "https://mirror2.chabokan.net/npm/punycode/-/punycode-2.3.1.tgz", {}, ""],
+
+    "qrcode": ["qrcode@1.5.4", "https://mirror2.chabokan.net/npm/qrcode/-/qrcode-1.5.4.tgz", { "dependencies": { "dijkstrajs": "^1.0.1", "pngjs": "^5.0.0", "yargs": "^15.3.1" }, "bin": "bin/qrcode" }, ""],
+
+    "readdirp": ["readdirp@4.1.2", "https://mirror2.chabokan.net/npm/readdirp/-/readdirp-4.1.2.tgz", {}, ""],
+
+    "require-directory": ["require-directory@2.1.1", "https://mirror2.chabokan.net/npm/require-directory/-/require-directory-2.1.1.tgz", {}, ""],
+
+    "require-main-filename": ["require-main-filename@2.0.0", "https://mirror2.chabokan.net/npm/require-main-filename/-/require-main-filename-2.0.0.tgz", {}, ""],
+
+    "resolve": ["resolve@1.22.12", "https://mirror2.chabokan.net/npm/resolve/-/resolve-1.22.12.tgz", { "dependencies": { "es-errors": "^1.3.0", "is-core-module": "^2.16.1", "path-parse": "^1.0.7", "supports-preserve-symlinks-flag": "^1.0.0" }, "bin": "bin/resolve" }, ""],
+
+    "resolve-from": ["resolve-from@4.0.0", "https://mirror2.chabokan.net/npm/resolve-from/-/resolve-from-4.0.0.tgz", {}, ""],
+
+    "rollup": ["rollup@4.60.1", "https://mirror2.chabokan.net/npm/rollup/-/rollup-4.60.1.tgz", { "dependencies": { "@types/estree": "1.0.8" }, "optionalDependencies": { "@rollup/rollup-linux-x64-gnu": "4.60.1", "@rollup/rollup-linux-x64-musl": "4.60.1", "fsevents": "~2.3.2" }, "bin": "dist/bin/rollup" }, ""],
+
+    "runed": ["runed@0.28.0", "https://mirror2.chabokan.net/npm/runed/-/runed-0.28.0.tgz", { "dependencies": { "esm-env": "^1.0.0" }, "peerDependencies": { "svelte": "^5.7.0" } }, ""],
+
+    "sade": ["sade@1.8.1", "https://mirror2.chabokan.net/npm/sade/-/sade-1.8.1.tgz", { "dependencies": { "mri": "^1.1.0" } }, ""],
+
+    "semver": ["semver@7.7.4", "https://mirror2.chabokan.net/npm/semver/-/semver-7.7.4.tgz", { "bin": "bin/semver.js" }, ""],
+
+    "set-blocking": ["set-blocking@2.0.0", "https://mirror2.chabokan.net/npm/set-blocking/-/set-blocking-2.0.0.tgz", {}, ""],
+
+    "set-cookie-parser": ["set-cookie-parser@3.1.0", "https://mirror2.chabokan.net/npm/set-cookie-parser/-/set-cookie-parser-3.1.0.tgz", {}, ""],
+
+    "shebang-command": ["shebang-command@2.0.0", "https://mirror2.chabokan.net/npm/shebang-command/-/shebang-command-2.0.0.tgz", { "dependencies": { "shebang-regex": "^3.0.0" } }, ""],
+
+    "shebang-regex": ["shebang-regex@3.0.0", "https://mirror2.chabokan.net/npm/shebang-regex/-/shebang-regex-3.0.0.tgz", {}, ""],
+
+    "sirv": ["sirv@3.0.2", "https://mirror2.chabokan.net/npm/sirv/-/sirv-3.0.2.tgz", { "dependencies": { "@polka/url": "^1.0.0-next.24", "mrmime": "^2.0.0", "totalist": "^3.0.0" } }, ""],
+
+    "source-map-js": ["source-map-js@1.2.1", "https://mirror2.chabokan.net/npm/source-map-js/-/source-map-js-1.2.1.tgz", {}, ""],
+
+    "string-width": ["string-width@4.2.3", "https://mirror2.chabokan.net/npm/string-width/-/string-width-4.2.3.tgz", { "dependencies": { "emoji-regex": "^8.0.0", "is-fullwidth-code-point": "^3.0.0", "strip-ansi": "^6.0.1" } }, ""],
+
+    "strip-ansi": ["strip-ansi@6.0.1", "https://mirror2.chabokan.net/npm/strip-ansi/-/strip-ansi-6.0.1.tgz", { "dependencies": { "ansi-regex": "^5.0.1" } }, ""],
+
+    "strip-json-comments": ["strip-json-comments@3.1.1", "https://mirror2.chabokan.net/npm/strip-json-comments/-/strip-json-comments-3.1.1.tgz", {}, ""],
+
+    "supports-color": ["supports-color@7.2.0", "https://mirror2.chabokan.net/npm/supports-color/-/supports-color-7.2.0.tgz", { "dependencies": { "has-flag": "^4.0.0" } }, ""],
+
+    "supports-preserve-symlinks-flag": ["supports-preserve-symlinks-flag@1.0.0", "https://mirror2.chabokan.net/npm/supports-preserve-symlinks-flag/-/supports-preserve-symlinks-flag-1.0.0.tgz", {}, ""],
+
+    "svelte": ["svelte@5.55.1", "https://mirror2.chabokan.net/npm/svelte/-/svelte-5.55.1.tgz", { "dependencies": { "@jridgewell/remapping": "^2.3.4", "@jridgewell/sourcemap-codec": "^1.5.0", "@sveltejs/acorn-typescript": "^1.0.5", "@types/estree": "^1.0.5", "@types/trusted-types": "^2.0.7", "acorn": "^8.12.1", "aria-query": "5.3.1", "axobject-query": "^4.1.0", "clsx": "^2.1.1", "devalue": "^5.6.4", "esm-env": "^1.2.1", "esrap": "^2.2.4", "is-reference": "^3.0.3", "locate-character": "^3.0.0", "magic-string": "^0.30.11", "zimmerframe": "^1.1.2" } }, ""],
+
+    "svelte-check": ["svelte-check@4.4.5", "https://mirror2.chabokan.net/npm/svelte-check/-/svelte-check-4.4.5.tgz", { "dependencies": { "@jridgewell/trace-mapping": "^0.3.25", "chokidar": "^4.0.1", "fdir": "^6.2.0", "picocolors": "^1.0.0", "sade": "^1.7.4" }, "peerDependencies": { "svelte": "^4.0.0 || ^5.0.0-next.0", "typescript": ">=5.0.0" }, "bin": "bin/svelte-check" }, ""],
+
+    "svelte-eslint-parser": ["svelte-eslint-parser@1.6.0", "https://mirror2.chabokan.net/npm/svelte-eslint-parser/-/svelte-eslint-parser-1.6.0.tgz", { "dependencies": { "eslint-scope": "^8.2.0", "eslint-visitor-keys": "^4.0.0", "espree": "^10.0.0", "postcss": "^8.4.49", "postcss-scss": "^4.0.9", "postcss-selector-parser": "^7.0.0", "semver": "^7.7.2" }, "peerDependencies": { "svelte": "^3.37.0 || ^4.0.0 || ^5.0.0" } }, ""],
+
+    "svelte-sonner": ["svelte-sonner@1.1.0", "https://mirror2.chabokan.net/npm/svelte-sonner/-/svelte-sonner-1.1.0.tgz", { "dependencies": { "runed": "^0.28.0" }, "peerDependencies": { "svelte": "^5.0.0" } }, ""],
+
+    "svelte-tippy": ["svelte-tippy@1.3.2", "https://mirror2.chabokan.net/npm/svelte-tippy/-/svelte-tippy-1.3.2.tgz", { "dependencies": { "tippy.js": "6.3.7" } }, ""],
+
+    "tailwindcss": ["tailwindcss@4.2.2", "https://mirror2.chabokan.net/npm/tailwindcss/-/tailwindcss-4.2.2.tgz", {}, ""],
+
+    "tapable": ["tapable@2.3.2", "https://mirror2.chabokan.net/npm/tapable/-/tapable-2.3.2.tgz", {}, ""],
+
+    "tinyglobby": ["tinyglobby@0.2.15", "https://mirror2.chabokan.net/npm/tinyglobby/-/tinyglobby-0.2.15.tgz", { "dependencies": { "fdir": "^6.5.0", "picomatch": "^4.0.3" } }, ""],
+
+    "tippy.js": ["tippy.js@6.3.7", "https://mirror2.chabokan.net/npm/tippy.js/-/tippy.js-6.3.7.tgz", { "dependencies": { "@popperjs/core": "^2.9.0" } }, ""],
+
+    "totalist": ["totalist@3.0.1", "https://mirror2.chabokan.net/npm/totalist/-/totalist-3.0.1.tgz", {}, ""],
+
+    "tr46": ["tr46@0.0.3", "https://mirror2.chabokan.net/npm/tr46/-/tr46-0.0.3.tgz", {}, ""],
+
+    "ts-api-utils": ["ts-api-utils@2.5.0", "https://mirror2.chabokan.net/npm/ts-api-utils/-/ts-api-utils-2.5.0.tgz", { "peerDependencies": { "typescript": ">=4.8.4" } }, ""],
+
+    "type-check": ["type-check@0.4.0", "https://mirror2.chabokan.net/npm/type-check/-/type-check-0.4.0.tgz", { "dependencies": { "prelude-ls": "^1.2.1" } }, ""],
+
+    "typescript": ["typescript@5.9.3", "https://mirror2.chabokan.net/npm/typescript/-/typescript-5.9.3.tgz", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, ""],
+
+    "typescript-eslint": ["typescript-eslint@8.58.0", "https://mirror2.chabokan.net/npm/typescript-eslint/-/typescript-eslint-8.58.0.tgz", { "dependencies": { "@typescript-eslint/eslint-plugin": "8.58.0", "@typescript-eslint/parser": "8.58.0", "@typescript-eslint/typescript-estree": "8.58.0", "@typescript-eslint/utils": "8.58.0" }, "peerDependencies": { "eslint": "^8.57.0 || ^9.0.0 || ^10.0.0", "typescript": ">=4.8.4 <6.1.0" } }, ""],
+
+    "undici-types": ["undici-types@7.18.2", "https://mirror2.chabokan.net/npm/undici-types/-/undici-types-7.18.2.tgz", {}, ""],
+
+    "uri-js": ["uri-js@4.4.1", "https://mirror2.chabokan.net/npm/uri-js/-/uri-js-4.4.1.tgz", { "dependencies": { "punycode": "^2.1.0" } }, ""],
+
+    "util-deprecate": ["util-deprecate@1.0.2", "https://mirror2.chabokan.net/npm/util-deprecate/-/util-deprecate-1.0.2.tgz", {}, ""],
+
+    "vite": ["vite@6.4.1", "https://mirror2.chabokan.net/npm/vite/-/vite-6.4.1.tgz", { "dependencies": { "esbuild": "^0.25.0", "fdir": "^6.4.4", "picomatch": "^4.0.2", "postcss": "^8.5.3", "rollup": "^4.34.9", "tinyglobby": "^0.2.13" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@types/node": "^18.0.0 || ^20.0.0 || >=22.0.0", "jiti": ">=1.21.0", "less": "*", "lightningcss": "^1.21.0", "sass": "*", "sass-embedded": "*", "stylus": "*", "sugarss": "*", "terser": "^5.16.0", "tsx": "^4.8.1", "yaml": "^2.4.2" }, "optionalPeers": ["less", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx"], "bin": "bin/vite.js" }, ""],
+
+    "vitefu": ["vitefu@1.1.2", "https://mirror2.chabokan.net/npm/vitefu/-/vitefu-1.1.2.tgz", { "peerDependencies": { "vite": "^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0-beta.0" } }, ""],
+
+    "web-streams-polyfill": ["web-streams-polyfill@3.3.3", "https://mirror2.chabokan.net/npm/web-streams-polyfill/-/web-streams-polyfill-3.3.3.tgz", {}, ""],
+
+    "webidl-conversions": ["webidl-conversions@3.0.1", "https://mirror2.chabokan.net/npm/webidl-conversions/-/webidl-conversions-3.0.1.tgz", {}, ""],
+
+    "whatwg-url": ["whatwg-url@5.0.0", "https://mirror2.chabokan.net/npm/whatwg-url/-/whatwg-url-5.0.0.tgz", { "dependencies": { "tr46": "~0.0.3", "webidl-conversions": "^3.0.0" } }, ""],
+
+    "which": ["which@2.0.2", "https://mirror2.chabokan.net/npm/which/-/which-2.0.2.tgz", { "dependencies": { "isexe": "^2.0.0" }, "bin": { "node-which": "bin/node-which" } }, ""],
+
+    "which-module": ["which-module@2.0.1", "https://mirror2.chabokan.net/npm/which-module/-/which-module-2.0.1.tgz", {}, ""],
+
+    "word-wrap": ["word-wrap@1.2.5", "https://mirror2.chabokan.net/npm/word-wrap/-/word-wrap-1.2.5.tgz", {}, ""],
+
+    "wrap-ansi": ["wrap-ansi@6.2.0", "https://mirror2.chabokan.net/npm/wrap-ansi/-/wrap-ansi-6.2.0.tgz", { "dependencies": { "ansi-styles": "^4.0.0", "string-width": "^4.1.0", "strip-ansi": "^6.0.0" } }, ""],
+
+    "ws": ["ws@8.20.0", "https://mirror2.chabokan.net/npm/ws/-/ws-8.20.0.tgz", { "peerDependencies": { "bufferutil": "^4.0.1", "utf-8-validate": ">=5.0.2" }, "optionalPeers": ["bufferutil", "utf-8-validate"] }, ""],
+
+    "y18n": ["y18n@4.0.3", "https://mirror2.chabokan.net/npm/y18n/-/y18n-4.0.3.tgz", {}, ""],
+
+    "yaml": ["yaml@2.8.3", "https://mirror2.chabokan.net/npm/yaml/-/yaml-2.8.3.tgz", { "bin": "bin.mjs" }, "sha512-AvbaCLOO2Otw/lW5bmh9d/WEdcDFdQp2Z2ZUH3pX9U2ihyUY0nvLv7J6TrWowklRGPYbB/IuIMfYgxaCPg5Bpg=="],
+
+    "yargs": ["yargs@15.4.1", "https://mirror2.chabokan.net/npm/yargs/-/yargs-15.4.1.tgz", { "dependencies": { "cliui": "^6.0.0", "decamelize": "^1.2.0", "find-up": "^4.1.0", "get-caller-file": "^2.0.1", "require-directory": "^2.1.1", "require-main-filename": "^2.0.0", "set-blocking": "^2.0.0", "string-width": "^4.2.0", "which-module": "^2.0.0", "y18n": "^4.0.0", "yargs-parser": "^18.1.2" } }, ""],
+
+    "yargs-parser": ["yargs-parser@18.1.3", "https://mirror2.chabokan.net/npm/yargs-parser/-/yargs-parser-18.1.3.tgz", { "dependencies": { "camelcase": "^5.0.0", "decamelize": "^1.2.0" } }, ""],
+
+    "yocto-queue": ["yocto-queue@0.1.0", "https://mirror2.chabokan.net/npm/yocto-queue/-/yocto-queue-0.1.0.tgz", {}, ""],
+
+    "zimmerframe": ["zimmerframe@1.1.4", "https://mirror2.chabokan.net/npm/zimmerframe/-/zimmerframe-1.1.4.tgz", {}, ""],
+
+    "zod": ["zod@3.25.46", "https://mirror2.chabokan.net/npm/zod/-/zod-3.25.46.tgz", {}, ""],
+
+    "@eslint-community/eslint-utils/eslint-visitor-keys": ["eslint-visitor-keys@3.4.3", "https://mirror2.chabokan.net/npm/eslint-visitor-keys/-/eslint-visitor-keys-3.4.3.tgz", {}, ""],
+
+    "@eslint/eslintrc/globals": ["globals@14.0.0", "https://mirror2.chabokan.net/npm/globals/-/globals-14.0.0.tgz", {}, ""],
+
+    "@rollup/plugin-commonjs/is-reference": ["is-reference@1.2.1", "https://mirror2.chabokan.net/npm/is-reference/-/is-reference-1.2.1.tgz", { "dependencies": { "@types/estree": "*" } }, ""],
+
+    "@typescript-eslint/eslint-plugin/ignore": ["ignore@7.0.5", "https://mirror2.chabokan.net/npm/ignore/-/ignore-7.0.5.tgz", {}, ""],
+
+    "@typescript-eslint/typescript-estree/minimatch": ["minimatch@10.2.5", "https://mirror2.chabokan.net/npm/minimatch/-/minimatch-10.2.5.tgz", { "dependencies": { "brace-expansion": "^5.0.5" } }, ""],
+
+    "@typescript-eslint/visitor-keys/eslint-visitor-keys": ["eslint-visitor-keys@5.0.1", "https://mirror2.chabokan.net/npm/eslint-visitor-keys/-/eslint-visitor-keys-5.0.1.tgz", {}, ""],
+
+    "cross-fetch/node-fetch": ["node-fetch@2.7.0", "https://mirror2.chabokan.net/npm/node-fetch/-/node-fetch-2.7.0.tgz", { "dependencies": { "whatwg-url": "^5.0.0" }, "peerDependencies": { "encoding": "^0.1.0" }, "optionalPeers": ["encoding"] }, ""],
+
+    "eslint/chalk": ["chalk@4.1.2", "https://mirror2.chabokan.net/npm/chalk/-/chalk-4.1.2.tgz", { "dependencies": { "ansi-styles": "^4.1.0", "supports-color": "^7.1.0" } }, ""],
+
+    "libsql/detect-libc": ["detect-libc@2.0.2", "https://mirror2.chabokan.net/npm/detect-libc/-/detect-libc-2.0.2.tgz", {}, ""],
+
+    "postcss-load-config/yaml": ["yaml@1.10.3", "https://mirror2.chabokan.net/npm/yaml/-/yaml-1.10.3.tgz", {}, "sha512-vIYeF1u3CjlhAFekPPAk2h/Kv4T3mAkMox5OymRiJQB0spDP10LHvt+K7G9Ny6NuuMAb25/6n1qyUjAcGNf/AA=="],
+
+    "svelte-eslint-parser/postcss-selector-parser": ["postcss-selector-parser@7.1.1", "https://mirror2.chabokan.net/npm/postcss-selector-parser/-/postcss-selector-parser-7.1.1.tgz", { "dependencies": { "cssesc": "^3.0.0", "util-deprecate": "^1.0.2" } }, ""],
+
+    "yargs/find-up": ["find-up@4.1.0", "https://mirror2.chabokan.net/npm/find-up/-/find-up-4.1.0.tgz", { "dependencies": { "locate-path": "^5.0.0", "path-exists": "^4.0.0" } }, ""],
+
+    "@typescript-eslint/typescript-estree/minimatch/brace-expansion": ["brace-expansion@5.0.5", "https://mirror2.chabokan.net/npm/brace-expansion/-/brace-expansion-5.0.5.tgz", { "dependencies": { "balanced-match": "^4.0.2" } }, ""],
+
+    "yargs/find-up/locate-path": ["locate-path@5.0.0", "https://mirror2.chabokan.net/npm/locate-path/-/locate-path-5.0.0.tgz", { "dependencies": { "p-locate": "^4.1.0" } }, ""],
+
+    "@typescript-eslint/typescript-estree/minimatch/brace-expansion/balanced-match": ["balanced-match@4.0.4", "https://mirror2.chabokan.net/npm/balanced-match/-/balanced-match-4.0.4.tgz", {}, ""],
+
+    "yargs/find-up/locate-path/p-locate": ["p-locate@4.1.0", "https://mirror2.chabokan.net/npm/p-locate/-/p-locate-4.1.0.tgz", { "dependencies": { "p-limit": "^2.2.0" } }, ""],
+
+    "yargs/find-up/locate-path/p-locate/p-limit": ["p-limit@2.3.0", "https://mirror2.chabokan.net/npm/p-limit/-/p-limit-2.3.0.tgz", { "dependencies": { "p-try": "^2.0.0" } }, ""],
+  }
+}

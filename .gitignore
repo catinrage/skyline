@@ -1,0 +1,37 @@
+node_modules
+
+# Output
+.output
+.vercel
+.netlify
+.wrangler
+/.svelte-kit
+/build
+/data/
+ecosystem.config.cjs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+new-design
+
+# AI assistant local state
+.claude/
+.codex/
+CLAUDE.md
+codex-*
+
+# PM2
+ecosystem.config.cjs.example
