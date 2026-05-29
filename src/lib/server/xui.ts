@@ -38,7 +38,7 @@ interface XuiInboundClient {
 	day?: number;
 	days?: number;
 	enable?: boolean;
-	tgId?: string;
+	tgId?: string | number;
 	subId?: string;
 }
 
@@ -104,8 +104,8 @@ interface XuiInbound {
 	port: number | null;
 	protocol: string | null;
 	enable?: boolean;
-	settings: string | null;
-	streamSettings: string | null;
+	settings: string | object | null;
+	streamSettings: string | object | null;
 	clientStats?: XuiClientStat[] | null;
 }
 
@@ -368,9 +368,13 @@ function getActivationExpiryDays(client: XuiInboundClient): number | null {
 	return null;
 }
 
-function parseJson<T>(value: string | null): T | null {
-	if (!value) {
+function parseJson<T>(value: string | object | null | undefined): T | null {
+	if (value == null) {
 		return null;
+	}
+
+	if (typeof value === 'object') {
+		return value as T;
 	}
 
 	try {
@@ -789,7 +793,7 @@ function buildTrafficMap(inbound: XuiInbound) {
 
 async function getOnlineStatusMap() {
 	try {
-		const onlineEmails = await xuiRequest<string[]>('inbounds/onlines', { method: 'POST' });
+		const onlineEmails = await xuiRequest<string[]>('clients/onlines', { method: 'POST' });
 		return new Map(
 			onlineEmails
 				.filter((email): email is string => typeof email === 'string' && email.trim().length > 0)
@@ -938,25 +942,21 @@ function randomSubId(length = 16) {
 
 export async function createVpnClient(input: CreateVpnClientInput) {
 	const payload = {
-		id: input.inboundId,
-		settings: JSON.stringify({
-			clients: [
-				{
-					id: input.uuid,
-					email: input.email,
-					flow: '',
-					limitIp: input.limitIp ?? 0,
-					totalGB: input.totalBytes,
-					expiryTime: input.expiryTime,
-					enable: input.enable ?? true,
-					tgId: input.tgId ?? '',
-					subId: input.subId ?? randomSubId()
-				}
-			]
-		})
+		client: {
+			id: input.uuid,
+			email: input.email,
+			flow: '',
+			limitIp: input.limitIp ?? 0,
+			totalGB: input.totalBytes,
+			expiryTime: input.expiryTime,
+			enable: input.enable ?? true,
+			tgId: Number(input.tgId) || 0,
+			subId: input.subId ?? randomSubId()
+		},
+		inboundIds: [input.inboundId]
 	};
 
-	const raw = await xuiRequestRaw('inbounds/addClient', {
+	const raw = await xuiRequestRaw('clients/add', {
 		method: 'POST',
 		headers: {
 			'content-type': 'application/json'
@@ -1023,22 +1023,16 @@ export async function updateVpnClient(input: UpdateVpnClientInput) {
 	}
 
 	const payload = {
-		id: input.inboundId,
-		settings: JSON.stringify({
-			clients: [
-				{
-					...current.client,
-					id: input.uuid,
-					email,
-					totalGB: input.totalBytes,
-					expiryTime: input.expiryTime,
-					enable: input.enable ?? current.client.enable ?? true
-				}
-			]
-		})
+		...current.client,
+		id: input.uuid,
+		email,
+		totalGB: input.totalBytes,
+		expiryTime: input.expiryTime,
+		enable: input.enable ?? current.client.enable ?? true,
+		tgId: Number(current.client.tgId) || 0
 	};
 
-	const raw = await xuiRequestRaw(`inbounds/updateClient/${encodeURIComponent(input.uuid)}`, {
+	const raw = await xuiRequestRaw(`clients/update/${encodeURIComponent(email)}`, {
 		method: 'POST',
 		headers: {
 			'content-type': 'application/json'
@@ -1088,17 +1082,14 @@ export async function setVpnClientEnabled(inboundId: number, uuid: string, enabl
 	});
 }
 
-export async function resetVpnClientTraffic(inboundId: number, email: string) {
-	await xuiRequest<unknown>(
-		`inbounds/${inboundId}/resetClientTraffic/${encodeURIComponent(email)}`,
-		{
-			method: 'POST'
-		}
-	);
+export async function resetVpnClientTraffic(email: string) {
+	await xuiRequest<unknown>(`clients/resetTraffic/${encodeURIComponent(email)}`, {
+		method: 'POST'
+	});
 }
 
-export async function deleteVpnClient(inboundId: number, clientId: string) {
-	await xuiRequest<unknown>(`inbounds/${inboundId}/delClient/${encodeURIComponent(clientId)}`, {
+export async function deleteVpnClient(email: string) {
+	await xuiRequest<unknown>(`clients/del/${encodeURIComponent(email)}`, {
 		method: 'POST'
 	});
 }

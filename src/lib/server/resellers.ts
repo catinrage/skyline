@@ -3531,7 +3531,7 @@ export async function createResellerRequest(
 		);
 	} catch (error) {
 		try {
-			await deleteVpnClient(plan.inboundId, uuid);
+			await deleteVpnClient(xuiEmail);
 			await run(
 				'DELETE FROM reseller_charges WHERE reseller_id = ? AND request_id IN (SELECT id FROM reseller_requests WHERE xui_client_uuid = ?)',
 				[resellerId, uuid]
@@ -3724,7 +3724,7 @@ export async function createCustomResellerRequest(
 		);
 	} catch (error) {
 		try {
-			await deleteVpnClient(input.inboundId, uuid);
+			await deleteVpnClient(xuiEmail);
 			await run(
 				'DELETE FROM reseller_charges WHERE reseller_id = ? AND request_id IN (SELECT id FROM reseller_requests WHERE xui_client_uuid = ?)',
 				[resellerId, uuid]
@@ -3887,7 +3887,7 @@ export async function createAdminVpnConfig(
 		);
 	} catch (error) {
 		try {
-			await deleteVpnClient(inboundId, uuid);
+			await deleteVpnClient(xuiEmail);
 			await run('DELETE FROM reseller_requests WHERE xui_client_uuid = ?', [uuid]);
 		} catch (cleanupError) {
 			resellerLogger.error('Failed to clean up admin-created x-ui client after DB failure.', {
@@ -3936,7 +3936,7 @@ export async function revokeResellerRequest(
 		);
 	}
 
-	await deleteVpnClient(request.xuiInboundId, request.xuiClientUuid);
+	await deleteVpnClient(request.xuiEmail);
 	await run('UPDATE reseller_requests SET revoked_at = ? WHERE id = ?', [nowSeconds(), requestId]);
 	await reverseOutstandingChargesForRequest(resellerId, requestId);
 	await refundGbLedgerForRequest(resellerId, requestId);
@@ -4097,7 +4097,7 @@ export async function rechargeResellerRequest(
 			expiryTime: expiresAtMs,
 			enable: true
 		});
-		await resetVpnClientTraffic(request.xuiInboundId, email);
+		await resetVpnClientTraffic(email);
 
 		const liveAfter = await getVpnClientUsageMap(fallbackHost, {
 			includeOnlineStatus: true
@@ -5552,7 +5552,7 @@ export async function managerRenewConfig(requestId: number, fallbackHost?: strin
 		expiryTime: expiresAtMs,
 		enable: true
 	});
-	await resetVpnClientTraffic(request.xuiInboundId, email);
+	await resetVpnClientTraffic(email);
 
 	const liveAfter = await getVpnClientUsageMap(fallbackHost, { includeOnlineStatus: true });
 	return liveAfter.get(request.xuiClientUuid) ?? null;
