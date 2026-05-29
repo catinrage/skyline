@@ -1,19 +1,22 @@
 #!/usr/bin/env node
 
 import { createClient } from '@libsql/client';
-import { randomBytes, scrypt as scryptCallback } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { promisify } from 'node:util';
 import { spawn, spawnSync } from 'node:child_process';
 import chalk from 'chalk';
 import ora from 'ora';
 import enquirer from 'enquirer';
+import {
+	hashSecret,
+	normalizeUsername,
+	nowSeconds,
+	validatePanelBasePath
+} from './sky-utils.mjs';
 
 const { Select, Password, Input, Confirm } = enquirer;
 
-const scrypt = promisify(scryptCallback);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, '..');
 const serviceName = process.env.SKYLINE_SERVICE || 'skyline';
@@ -22,17 +25,6 @@ loadEnv(resolve(projectRoot, '.env'));
 
 const databasePath = process.env.DATABASE_PATH ?? resolve(projectRoot, 'data', 'skyline.sqlite');
 const databaseUrl = pathToFileURL(databasePath).href;
-const reservedPanelBasePaths = new Set([
-	'api',
-	'build',
-	'healthz',
-	'manage',
-	'manager',
-	'reseller',
-	'robots.txt',
-	'user',
-	'_app'
-]);
 
 /* -------------------------------------------------------------------------- */
 /* Theme & presentation helpers                                               */
@@ -52,7 +44,7 @@ const theme = {
 	bold: chalk.bold
 };
 
-const ansiPattern = /\[[0-9;]*m/g;
+const ansiPattern = new RegExp(String.fromCharCode(27) + '\\[[0-9;]*m', 'g');
 
 function visibleLength(value) {
 	return String(value).replace(ansiPattern, '').length;
@@ -73,10 +65,6 @@ function fail(message) {
 
 function info(message) {
 	console.log(`${theme.info('ℹ')} ${message}`);
-}
-
-function warn(message) {
-	console.log(`${theme.warn('⚠')} ${message}`);
 }
 
 function box(lines, { title = '', color = theme.brand } = {}) {
@@ -231,43 +219,6 @@ async function ensureAdminTables(db) {
 			expires_at INTEGER NOT NULL
 		);
 	`);
-}
-
-async function hashSecret(value) {
-	const salt = randomBytes(16);
-	const derivedKey = await scrypt(value, salt, 64);
-	return `scrypt$${salt.toString('base64')}$${derivedKey.toString('base64')}`;
-}
-
-function nowSeconds() {
-	return Math.floor(Date.now() / 1000);
-}
-
-function normalizeUsername(value) {
-	return String(value ?? '')
-		.trim()
-		.toLowerCase();
-}
-
-function normalizePanelBasePath(value) {
-	return String(value ?? '')
-		.trim()
-		.replace(/^\/+|\/+$/g, '')
-		.toLowerCase();
-}
-
-function validatePanelBasePath(value) {
-	const normalized = normalizePanelBasePath(value);
-	if (!normalized) return '';
-	if (!/^[a-z0-9][a-z0-9_-]{2,63}$/.test(normalized)) {
-		throw new Error(
-			'Panel path must be 3-64 chars and contain only lowercase letters, numbers, hyphen, or underscore.'
-		);
-	}
-	if (reservedPanelBasePaths.has(normalized)) {
-		throw new Error(`Panel path "${normalized}" is reserved by Skyline.`);
-	}
-	return normalized;
 }
 
 function requireArg(value, usage) {

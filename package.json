@@ -19,7 +19,8 @@
 		"lint": "prettier --check . && eslint .",
 		"changeset": "changeset",
 		"version": "changeset version && npm run sync-version",
-		"sky": "node scripts/sky.mjs"
+		"sky": "node scripts/sky.mjs",
+		"test": "node --test \"tests/**/*.test.ts\""
 	},
 	"devDependencies": {
 		"@changesets/cli": "^2.31.0",
