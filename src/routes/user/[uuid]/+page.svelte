@@ -1274,7 +1274,6 @@
 		}
 
 		.client-head,
-		.metric-block,
 		.config-block,
 		.bottom-grid {
 			display: flex;
@@ -1282,17 +1281,21 @@
 		}
 
 		.metric-block {
-			gap: 10px;
-			padding: 14px;
-			border-bottom: 1px solid var(--va-border);
-			background: transparent;
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 1px;
+			background: var(--va-border);
+			border-radius: 6px;
+			overflow: hidden;
+			padding: 0;
+			border-bottom: none;
 		}
 
 		.metric-side {
-			border: 1px solid var(--va-border);
-			border-radius: 10px;
-			background: var(--va-bg-panel);
-			padding: 14px;
+			background: var(--va-bg);
+			padding: 12px 14px;
+			border: none;
+			border-radius: 0;
 		}
 
 		.metric-divider {
@@ -1305,7 +1308,15 @@
 		}
 
 		.progress-track {
-			margin: 14px 16px 0;
+			margin: 10px 0 0;
+		}
+
+		.meter-foot {
+			font-size: 10px;
+		}
+
+		.ping-note {
+			display: none;
 		}
 
 		.config-block {
