@@ -10,7 +10,7 @@
 
 	let { data, resellerState }: Props = $props();
 
-	let draft = $derived(data.reseller.customMessage ?? '');
+	let draft = $state(data.reseller.customMessage ?? '');
 
 	async function handleSave() {
 		try {

@@ -8,8 +8,8 @@
 	};
 
 	let { data }: Props = $props();
-	let userPreviewMessage = $derived(data.userPanelMessage ?? '');
-	let resellerPreviewMessage = $derived(data.resellerPanelMessage ?? '');
+	let userPreviewMessage = $state(data.userPanelMessage ?? '');
+	let resellerPreviewMessage = $state(data.resellerPanelMessage ?? '');
 
 	async function handleSubmit(submit: () => Promise<void>) {
 		await submit();
@@ -24,13 +24,6 @@
 		updateMessage.fields.userMessage.set('');
 		updateMessage.fields.resellerMessage.set('');
 	}
-
-	$effect(() => {
-		userPreviewMessage = data.userPanelMessage ?? '';
-		resellerPreviewMessage = data.resellerPanelMessage ?? '';
-		updateMessage.fields.userMessage.set(data.userPanelMessage ?? '');
-		updateMessage.fields.resellerMessage.set(data.resellerPanelMessage ?? '');
-	});
 </script>
 
 <form
