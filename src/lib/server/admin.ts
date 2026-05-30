@@ -75,8 +75,8 @@ export type RuntimeSettings = {
 
 const defaultFeatureSettings: FeatureSettings = {
 	configIssueReportCooldownMinutes: 1,
-	latencyTestTargetUrl: 'https://www.gstatic.com/generate_204',
-	speedTestTargetUrl: 'http://ipv4.download.thinkbroadband.com/20MB.zip'
+	latencyTestTargetUrl: 'http://cp.cloudflare.com/',
+	speedTestTargetUrl: 'http://speedtest.tele2.net/10MB.zip'
 };
 
 const defaultRuntimeSettings: RuntimeSettings = {

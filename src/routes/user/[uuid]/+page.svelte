@@ -44,6 +44,7 @@
 	);
 	const quotaText = $derived(panelData.client.totalBytes === null ? 'نامحدود' : formatTraffic(panelData.client.totalBytes, { maximumFractionDigits: 0 }));
 	const remainingText = $derived(panelData.client.remainingBytes === null ? 'نامحدود' : formatTraffic(panelData.client.remainingBytes));
+	const pingWidgetEnabled = $derived(panelData.features.proxyPing);
 	const speedWidgetEnabled = $derived(panelData.features.speedTestWidget);
 	const pingAllowed = $derived(canUseOperationalActions(panelData.client.status));
 	const ticketAllowed = $derived(panelData.features.configIssueReport && panelData.client.status === 'active');
@@ -320,7 +321,7 @@
 								<span>{copyState === 'success' ? 'کپی شد' : 'کپی کانفیگ'}</span>
 							</button>
 
-							{#if speedWidgetEnabled}
+							{#if pingWidgetEnabled}
 								<form
 									{...measurePing.enhance(async ({ submit }) => {
 										await submitWithToast(submit, () => measurePing.result, 'pingSuccess', 'pingError');
@@ -331,6 +332,8 @@
 										<span>{measurePing.pending > 0 ? 'در حال تست...' : 'تست تاخیر'}</span>
 									</button>
 								</form>
+							{/if}
+							{#if speedWidgetEnabled}
 								<form
 									{...measureSpeed.enhance(async ({ submit }) => {
 										await submitWithToast(submit, () => measureSpeed.result, 'speedSuccess', 'speedError');
