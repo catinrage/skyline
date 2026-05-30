@@ -90,7 +90,7 @@
 	let search = $state('');
 	let statusFilter = $state<RequestStatusFilter>('all');
 	let currentPage = $state(1);
-	let selectedId = $derived<number | null>(data.requests[0]?.id ?? null);
+	let selectedId = $state<number | null>(data.requests[0]?.id ?? null);
 	const pageSize = 8;
 
 	let bookmarks = new SvelteSet<number>();

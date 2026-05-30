@@ -129,7 +129,7 @@
 	let filter = $state<ResellerFilter>('all');
 	let sort = $state<ResellerSort>('debt');
 	let sortDirection = $state<'asc' | 'desc'>('desc');
-	let selectedId = $derived<number | null>(data.resellerAccounts[0]?.id ?? null);
+	let selectedId = $state<number | null>(data.resellerAccounts[0]?.id ?? null);
 	let openMenuId = $state<number | null>(null);
 	let contextMenuStyle = $state('');
 	let mobileDetailsOpen = $state(false);
