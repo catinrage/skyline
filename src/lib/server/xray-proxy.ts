@@ -40,6 +40,7 @@ export interface TemporaryProxySession {
 	socksPort: number;
 	process: RunningProcess;
 	configPath: string;
+	getStderr: () => string;
 	cleanup: () => Promise<void>;
 }
 
@@ -394,6 +395,14 @@ export async function createTemporaryProxySession(configUrl: string): Promise<Te
 		pid: process.pid
 	});
 
+	// Buffer Xray stderr continuously so it can be included in error messages
+	// even after the process has started (routing errors show up after startup).
+	const stderrChunks: Buffer[] = [];
+	process.stderr?.on('data', (chunk: Buffer | string) => {
+		stderrChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+	});
+	const getStderr = () => Buffer.concat(stderrChunks).toString('utf8').trim();
+
 	try {
 		await waitForLocalPort(socksPort);
 		proxyLogger.debug('Temporary proxy session is ready.', {
@@ -402,7 +411,6 @@ export async function createTemporaryProxySession(configUrl: string): Promise<Te
 			pid: process.pid
 		});
 	} catch (error) {
-		const stderr = await readStreamText(process.stderr);
 		await terminateProcess(process);
 		rmSync(configPath, { force: true });
 		proxyLogger.error('Temporary proxy session failed to start.', {
@@ -410,7 +418,7 @@ export async function createTemporaryProxySession(configUrl: string): Promise<Te
 			configPath,
 			binaryPath,
 			pid: process.pid,
-			stderr: stderr.trim() || null,
+			stderr: getStderr() || null,
 			error: error instanceof Error ? error : undefined
 		});
 		throw error;
@@ -420,6 +428,7 @@ export async function createTemporaryProxySession(configUrl: string): Promise<Te
 		socksPort,
 		process,
 		configPath,
+		getStderr,
 		cleanup: async () => {
 			await terminateProcess(process);
 			rmSync(configPath, { force: true });

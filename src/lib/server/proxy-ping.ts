@@ -1,9 +1,17 @@
 import { createTemporaryProxySession, runProxyCurlRequest } from '$lib/server/xray-proxy';
 import { logger } from '$lib/server/logger';
 
-const defaultProbeTargetUrl = 'https://www.gstatic.com/generate_204';
+const defaultProbeTargetUrl = 'https://cloudflare.com/cdn-cgi/trace';
 const measuredRequestCount = 5;
 const proxyPingLogger = logger.child('proxy-ping');
+
+function curlError(curlStderr: string, xrayStderr: string, fallback: string) {
+	const parts: string[] = [];
+	if (curlStderr.trim()) parts.push(curlStderr.trim());
+	if (xrayStderr.trim()) parts.push(`xray: ${xrayStderr.trim()}`);
+	return parts.join(' | ') || fallback;
+}
+
 function parseCurlResult(statusCode: string, timeTotal: string, stderr: string) {
 	const status = Number(statusCode);
 
@@ -47,7 +55,7 @@ export async function measureProxyLatency(configUrl: string, targetUrl = default
 		});
 
 		if (warmupResult.exitCode !== 0) {
-			throw new Error(warmupResult.stderr.trim() || 'درخواست اولیه تست تاخیر از داخل پراکسی انجام نشد.');
+			throw new Error(curlError(warmupResult.stderr, session.getStderr(), 'درخواست اولیه تست تاخیر از داخل پراکسی انجام نشد.'));
 		}
 
 		parseCurlResult(warmupResult.statusCode, warmupResult.timeTotal, warmupResult.stderr);
@@ -60,7 +68,7 @@ export async function measureProxyLatency(configUrl: string, targetUrl = default
 			});
 
 			if (result.exitCode !== 0) {
-				throw new Error(result.stderr.trim() || 'درخواست تست تاخیر از داخل پراکسی انجام نشد.');
+				throw new Error(curlError(result.stderr, session.getStderr(), 'درخواست تست تاخیر از داخل پراکسی انجام نشد.'));
 			}
 
 			samples.push(parseCurlResult(result.statusCode, result.timeTotal, result.stderr));
@@ -97,7 +105,7 @@ export async function measureProxyDownloadSpeed(configUrl: string, targetUrl: st
 		});
 
 		if (result.exitCode !== 0) {
-			throw new Error(result.stderr.trim() || 'درخواست تست سرعت از داخل پراکسی انجام نشد.');
+			throw new Error(curlError(result.stderr, session.getStderr(), 'درخواست تست سرعت از داخل پراکسی انجام نشد.'));
 		}
 
 		assertSuccessfulHttp(result.statusCode, result.stderr);
