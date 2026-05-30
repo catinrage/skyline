@@ -250,8 +250,8 @@ function printHelp() {
 		['sky logs', 'Follow Skyline service logs'],
 		['sky enable', 'Enable service at boot'],
 		['sky disable', 'Disable service at boot'],
-		['sky update', 'Pull, install, build, restart'],
-		['sky repair', 'Reinstall deps, rebuild, verify DB, restart'],
+		['sky update [--proxy <url>] [--npm-proxy]', 'Pull, install, build, restart'],
+		['sky repair [--npm-proxy] [--proxy <url>]', 'Reinstall deps, rebuild, verify DB, restart'],
 		['sky uninstall [--purge]', 'Remove service & sky CLI (--purge deletes DB)'],
 		['sky service <command>', 'Same commands under service namespace']
 	]);
@@ -312,6 +312,46 @@ function runAsync(command, args, options = {}) {
 				);
 		});
 	});
+}
+
+/**
+ * Parse --proxy <url> and --npm-proxy flags from a raw args array.
+ * Returns { proxy, npmProxy, gitArgs, npmEnv } ready to pass to runAsync.
+ *   gitArgs  — extra git -c args to set the proxy
+ *   npmEnv   — env override for npm ci (only set when --npm-proxy is passed)
+ */
+function parseProxyArgs(rawArgs) {
+	let proxy = '';
+	let npmProxy = false;
+	const rest = [...rawArgs];
+
+	for (let i = 0; i < rest.length; i++) {
+		if (rest[i] === '--proxy' && i + 1 < rest.length) {
+			proxy = rest[i + 1];
+			rest.splice(i, 2);
+			i--;
+		} else if (rest[i]?.startsWith('--proxy=')) {
+			proxy = rest[i].slice('--proxy='.length);
+			rest.splice(i, 1);
+			i--;
+		} else if (rest[i] === '--npm-proxy') {
+			npmProxy = true;
+			rest.splice(i, 1);
+			i--;
+		}
+	}
+
+	// Promote socks5:// → socks5h:// so git resolves hostnames via the proxy
+	const gitProxyUrl = proxy ? proxy.replace(/^socks5:\/\//, 'socks5h://') : '';
+	const gitArgs = gitProxyUrl
+		? ['-c', `http.proxy=${gitProxyUrl}`, '-c', `https.proxy=${gitProxyUrl}`]
+		: [];
+	const npmEnv =
+		npmProxy && proxy
+			? { ...process.env, HTTPS_PROXY: proxy, HTTP_PROXY: proxy }
+			: null;
+
+	return { proxy, npmProxy, gitArgs, npmEnv, rest };
 }
 
 function isRoot() {
@@ -412,17 +452,18 @@ const commands = {
 	disable: () => svc.disable(),
 	logs: () => svc.logs(),
 
-	async update() {
+	async update(...rawArgs) {
+		const { gitArgs, npmEnv } = parseProxyArgs(rawArgs);
 		header();
 		console.log();
 		await withSpinner(
 			'Pulling latest changes',
-			() => runAsync('git', ['-C', projectRoot, 'pull', '--ff-only']),
+			() => runAsync('git', [...gitArgs, '-C', projectRoot, 'pull', '--ff-only']),
 			'Pulled latest changes'
 		);
 		await withSpinner(
 			'Installing dependencies',
-			() => runAsync('npm', ['ci'], { cwd: projectRoot }),
+			() => runAsync('npm', ['ci'], { cwd: projectRoot, ...(npmEnv ? { env: npmEnv } : {}) }),
 			'Dependencies installed'
 		);
 		await withSpinner(
@@ -439,12 +480,13 @@ const commands = {
 		ok(theme.bold('Skyline updated successfully.'));
 	},
 
-	async repair() {
+	async repair(...rawArgs) {
+		const { npmEnv } = parseProxyArgs(rawArgs);
 		header();
 		console.log();
 		await withSpinner(
 			'Reinstalling dependencies',
-			() => runAsync('npm', ['ci'], { cwd: projectRoot }),
+			() => runAsync('npm', ['ci'], { cwd: projectRoot, ...(npmEnv ? { env: npmEnv } : {}) }),
 			'Dependencies reinstalled'
 		);
 		await withSpinner(
