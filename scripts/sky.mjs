@@ -276,7 +276,8 @@ function printHelp() {
 	]);
 	group('Database', [
 		['sky db path', 'Show database path'],
-		['sky db integrity', 'Run integrity check']
+		['sky db integrity', 'Run integrity check'],
+		['sky db exec "<sql>"', 'Run a SQL statement']
 	]);
 
 	console.log(theme.brandBold('Environment'));
@@ -755,6 +756,26 @@ const commands = {
 			} finally {
 				db.close();
 			}
+		},
+
+		async exec(sql) {
+			const query = requireArg(sql, 'sky db exec "<sql>"').trim();
+			const db = getDb();
+			try {
+				const result = await db.execute(query);
+				if (result.rows.length > 0) {
+					const cols = result.columns;
+					const rows = result.rows.map((row) => cols.map((col) => String(row[col] ?? '')));
+					console.log();
+					table(cols, rows);
+					console.log();
+					console.log(theme.muted(`${result.rows.length} row(s)`));
+				} else {
+					ok(`Query OK. ${result.rowsAffected} row(s) affected.`);
+				}
+			} finally {
+				db.close();
+			}
 		}
 	}
 };
@@ -918,12 +939,18 @@ async function databaseMenu() {
 	const action = await askSelect('Database', [
 		{ name: 'path', message: 'Show database path' },
 		{ name: 'integrity', message: 'Run integrity check' },
+		{ name: 'exec', message: 'Run a SQL statement' },
 		separator,
 		{ name: 'back', message: theme.muted('Back') }
 	]);
 	if (action === 'back') return;
 	if (action === 'path') return commands.db.path();
 	if (action === 'integrity') return commands.db.integrity();
+	if (action === 'exec') {
+		const { Input } = await import('enquirer');
+		const sql = await new Input({ message: 'SQL', hint: 'e.g. SELECT * FROM settings' }).run();
+		return commands.db.exec(sql);
+	}
 }
 
 async function runMenu() {
