@@ -55,9 +55,8 @@
 	const canCreate = $derived(
 		data.salesEnabled &&
 			inboundId !== null &&
-			Number.isInteger(quotaGb) &&
-			quotaGb > 1 &&
-			quotaGb <= 50 &&
+			Number.isFinite(quotaGb) &&
+			quotaGb >= 0.01 &&
 			Number.isInteger(durationDays) &&
 			durationDays >= 1 &&
 			durationDays <= 365 &&
@@ -110,8 +109,8 @@
 			toast.error('یک سرور مجاز برای ساخت کانفیگ انتخاب کنید.');
 			return false;
 		}
-		if (!Number.isInteger(quotaGb) || quotaGb <= 1 || quotaGb > 50) {
-			toast.error('حجم باید عدد صحیح بین ۲ تا ۵۰ گیگابایت باشد.');
+		if (!Number.isFinite(quotaGb) || quotaGb < 0.01) {
+			toast.error('حجم باید حداقل ۰.۰۱ گیگابایت باشد.');
 			return false;
 		}
 
@@ -263,7 +262,7 @@
 					<label class="field">
 						<span>حجم دقیق</span>
 						<div class="input-unit">
-							<input type="number" min="2" max="50" step="1" bind:value={quotaGb} oninput={selectCustom} />
+							<input type="number" min="0.01" step="0.01" bind:value={quotaGb} oninput={selectCustom} />
 							<strong>GB</strong>
 						</div>
 					</label>
@@ -335,7 +334,7 @@
 			<input type="text" bind:value={templateName} placeholder="مثلاً ماهانه ۱۰ گیگ" />
 		</label>
 		<div class="template-values">
-			<label class="field"><span>حجم GB</span><input type="number" min="2" max="50" step="1" bind:value={templateQuotaGb} /></label>
+			<label class="field"><span>حجم GB</span><input type="number" min="0.01" step="0.01" bind:value={templateQuotaGb} /></label>
 			<label class="field"><span>روز</span><input type="number" min="1" max="365" step="1" bind:value={templateDurationDays} /></label>
 			<label class="field"><span>قیمت</span><input type="number" min="0" step="1000" bind:value={templatePriceToman} /></label>
 		</div>

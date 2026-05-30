@@ -220,9 +220,8 @@ export const createCustomConfigCommand = command(
 		inboundId: z.number().int().positive('سرور انتخاب نشده است.'),
 		quotaGb: z
 			.number()
-			.int('حجم باید عدد صحیح باشد.')
-			.min(2, 'حجم کانفیگ باید حداقل ۲ گیگابایت باشد.')
-			.max(50, 'حجم کانفیگ نمی‌تواند بیشتر از ۵۰ گیگابایت باشد.'),
+			.min(0.01, 'حجم کانفیگ باید حداقل ۰.۰۱ گیگابایت باشد.')
+			.positive(),
 		durationDays: z
 			.number()
 			.int('مدت باید عدد صحیح باشد.')
@@ -284,9 +283,8 @@ export const createTemplateCommand = command(
 		name: z.string().trim().max(64, 'نام قالب نمی‌تواند بیشتر از ۶۴ کاراکتر باشد.').optional(),
 		quotaGb: z
 			.number()
-			.int('حجم باید عدد صحیح باشد.')
-			.min(2, 'حجم قالب باید حداقل ۲ گیگابایت باشد.')
-			.max(50, 'حجم قالب نمی‌تواند بیشتر از ۵۰ گیگابایت باشد.'),
+			.min(0.01, 'حجم قالب باید حداقل ۰.۰۱ گیگابایت باشد.')
+			.positive(),
 		durationDays: z
 			.number()
 			.int('مدت باید عدد صحیح باشد.')
@@ -992,7 +990,7 @@ export const transferGbToSubResellerCommand = command(
 
 export const createSubPackageCommand = command(
 	z.object({
-		quotaGb: z.number().int().min(1, 'حجم باید حداقل ۱ گیگابایت باشد.'),
+		quotaGb: z.number().min(0.01, 'حجم باید حداقل ۰.۰۱ گیگابایت باشد.').positive(),
 		priceToman: z.number().int().min(0, 'قیمت نمی‌تواند منفی باشد.')
 	}),
 	async ({ quotaGb, priceToman }) => {
@@ -1013,7 +1011,7 @@ export const createSubPackageCommand = command(
 export const updateSubPackageCommand = command(
 	z.object({
 		id: z.number().int().positive(),
-		quotaGb: z.number().int().min(1, 'حجم باید حداقل ۱ گیگابایت باشد.'),
+		quotaGb: z.number().min(0.01, 'حجم باید حداقل ۰.۰۱ گیگابایت باشد.').positive(),
 		priceToman: z.number().int().min(0, 'قیمت نمی‌تواند منفی باشد.')
 	}),
 	async ({ id, quotaGb, priceToman }) => {

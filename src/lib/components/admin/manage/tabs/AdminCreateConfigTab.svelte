@@ -39,7 +39,7 @@
 			null
 	);
 	const canCreate = $derived(
-		inboundId !== null && Number.isInteger(quotaGb) && quotaGb > 0 &&
+		inboundId !== null && Number.isFinite(quotaGb) && quotaGb >= 0.01 &&
 			Number.isInteger(durationDays) && durationDays > 0
 	);
 
@@ -132,7 +132,7 @@
 <Modal open={modalOpen} title="کانفیگ جدید مدیر" eyebrow="مالک داخلی مدیر" onClose={() => (modalOpen = false)}>
 	<div class="modal-form">
 		<label>سرور<select class="admin-field" bind:value={inboundId}><option value={null}>انتخاب سرور</option>{#each data.inboundOptions as inbound (inbound.id)}<option value={inbound.id}>{inbound.remark || `Inbound #${inbound.id}`}</option>{/each}</select></label>
-		<div class="grid"><label>حجم<input class="admin-field" type="number" min="1" bind:value={quotaGb} /></label><label>مدت<input class="admin-field" type="number" min="1" bind:value={durationDays} /></label></div>
+		<div class="grid"><label>حجم<input class="admin-field" type="number" min="0.01" step="0.01" bind:value={quotaGb} /></label><label>مدت<input class="admin-field" type="number" min="1" bind:value={durationDays} /></label></div>
 		<label>نام مشتری<input class="admin-field" type="text" bind:value={customerLabel} /></label>
 		<label>یادداشت داخلی<textarea class="admin-field" bind:value={internalNote}></textarea></label>
 		<button class="admin-btn admin-btn-primary full" type="button" disabled={!canCreate || createAdminConfigCommand.pending > 0} onclick={handleCreate}>ساخت کانفیگ</button>

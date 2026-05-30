@@ -1293,7 +1293,7 @@ export const settleFullResellerDebt = form(
 );
 
 const creditPackageSchema = z.object({
-	quotaGb: z.coerce.number().int().positive('حجم بسته باید بیشتر از صفر باشد.'),
+	quotaGb: z.coerce.number().min(0.01, 'حجم بسته باید حداقل ۰.۰۱ گیگابایت باشد.').positive(),
 	priceToman: currencyNumber(z.number().int().nonnegative('قیمت باید صفر یا بیشتر باشد.')),
 	isPublic: z.enum(['true', 'false']).optional().default('true')
 });
@@ -1471,7 +1471,7 @@ export const reviewCreditRequest = form(
 );
 
 const resellerPlanSchema = z.object({
-	quotaGb: z.coerce.number().int().positive('حجم پلن باید بیشتر از صفر باشد.'),
+	quotaGb: z.coerce.number().min(0.01, 'حجم پلن باید حداقل ۰.۰۱ گیگابایت باشد.').positive(),
 	durationDays: z.coerce.number().int().positive('تعداد روز باید بیشتر از صفر باشد.'),
 	priceToman: currencyNumber(z.number().int().nonnegative('قیمت باید صفر یا بیشتر باشد.')),
 	inboundId: z.coerce.number().int().positive('ورودی نامعتبر است.')
@@ -1603,9 +1603,8 @@ export const createAdminConfigCommand = command(
 		inboundId: z.number().int().positive('سرور انتخاب نشده است.'),
 		quotaGb: z
 			.number()
-			.int('حجم باید عدد صحیح باشد.')
-			.min(1, 'حجم باید حداقل ۱ گیگابایت باشد.')
-			.max(10000, 'حجم نمی‌تواند بیشتر از ۱۰۰۰۰ گیگابایت باشد.'),
+			.min(0.01, 'حجم باید حداقل ۰.۰۱ گیگابایت باشد.')
+			.positive(),
 		durationDays: z
 			.number()
 			.int('مدت باید عدد صحیح باشد.')
