@@ -31,6 +31,7 @@
 	let speedTesting = $state(false);
 	let liveSpeedMbps = $state<number | null>(null);
 	let streamedSpeedMbps = $state<number | null>(null);
+	let lastSuccessfulPingMs = $state<number | null>(null);
 
 	const statusCopy: Record<
 		ClientStatus,
@@ -52,8 +53,11 @@
 	const pingAllowed = $derived(canUseOperationalActions(panelData.client.status));
 	const ticketAllowed = $derived(panelData.features.configIssueReport && panelData.client.status === 'active');
 	const visibleClientApps = $derived(panelData.clientAppLinks.filter((item) => item.name && item.downloadUrl));
-	const lastPingMs = $derived(typeof measurePing.result?.pingMs === 'number' ? measurePing.result.pingMs : null);
+	const lastPingMs = $derived(lastSuccessfulPingMs);
 	const lastSpeedMbps = $derived(streamedSpeedMbps);
+	const latencyButtonLabel = $derived(
+		measurePing.pending > 0 ? 'در حال تست...' : lastPingMs === null ? 'تست تاخیر' : `${lastPingMs}ms`
+	);
 
 	async function refreshPanel() {
 		refreshPulse = true;
@@ -267,6 +271,12 @@
 
 		return () => window.clearInterval(refreshInterval);
 	});
+
+	$effect(() => {
+		if (typeof measurePing.result?.pingMs === 'number') {
+			lastSuccessfulPingMs = measurePing.result.pingMs;
+		}
+	});
 </script>
 
 <svelte:head>
@@ -358,7 +368,8 @@
 					</div>
 					<div class="plan-box">
 						<span>پلن</span>
-						<strong>{quotaText} / {getExpiryPrimary(state.client)}</strong>
+						<strong class="plan-quota" dir={state.client.totalBytes === null ? 'rtl' : 'ltr'}>{quotaText}</strong>
+						<small>{getExpiryPrimary(state.client)}</small>
 					</div>
 				</div>
 
@@ -386,15 +397,6 @@
 							<strong>{getExpiryPrimary(state.client)}</strong>
 						</div>
 						<p class="expiry-note">تاریخ پایان: <span>{getExpirySecondary(state.client)}</span></p>
-						<p class="ping-note">
-							پینگ:
-							{#if lastPingMs === null}
-								تست نشده
-							{:else}
-								<span class="latency-value" style={`--latency-color: ${getLatencyColor(lastPingMs)}`}>{lastPingMs}ms</span>
-							{/if}
-							· سرعت: {lastSpeedMbps === null ? 'تست نشده' : `${lastSpeedMbps} Mbps`}
-						</p>
 					</div>
 				</div>
 
@@ -428,7 +430,13 @@
 								>
 									<button type="submit" class="ghost-button" disabled={!pingAllowed || measurePing.pending > 0}>
 										<span class="mdi {measurePing.pending > 0 ? 'mdi-loading mdi-spin' : 'mdi-cloud-outline'}"></span>
-										<span>{measurePing.pending > 0 ? 'در حال تست...' : 'تست تاخیر'}</span>
+										<span
+											class:button-result={lastPingMs !== null && measurePing.pending === 0}
+											class:latency-value={lastPingMs !== null && measurePing.pending === 0}
+											style={lastPingMs !== null && measurePing.pending === 0 ? `--latency-color: ${getLatencyColor(lastPingMs)}` : undefined}
+										>
+											{latencyButtonLabel}
+										</span>
 									</button>
 								</form>
 							{/if}
@@ -991,7 +999,8 @@
 	}
 
 	.plan-box span,
-	.plan-box strong {
+	.plan-box strong,
+	.plan-box small {
 		display: block;
 	}
 
@@ -1000,6 +1009,19 @@
 		color: var(--va-text);
 		font-size: 13px;
 		font-weight: 500;
+	}
+
+	.plan-box small {
+		margin-top: 4px;
+		color: var(--va-text-faint);
+		font-size: 11px;
+		line-height: 1.5;
+		text-align: right;
+	}
+
+	.plan-quota {
+		direction: ltr;
+		unicode-bidi: isolate;
 	}
 
 	.metric-block {
@@ -1030,8 +1052,7 @@
 	}
 
 	.big-meter span,
-	.meter-foot,
-	.ping-note {
+	.meter-foot {
 		color: var(--va-text-faint);
 		font-size: 11px;
 	}
@@ -1073,14 +1094,14 @@
 		color: var(--va-text);
 	}
 
-	.ping-note {
-		margin: 8px 0 0;
-	}
-
 	.latency-value {
 		color: var(--latency-color);
 		font-weight: 700;
 		text-shadow: 0 0 14px color-mix(in srgb, var(--latency-color) 42%, transparent);
+	}
+
+	.button-result {
+		font-weight: 400;
 	}
 
 	.config-block {
@@ -1425,10 +1446,6 @@
 
 		.meter-foot {
 			font-size: 10px;
-		}
-
-		.ping-note {
-			display: none;
 		}
 
 		.config-block {
