@@ -51,7 +51,8 @@ import {
 	connectResellerTelegramBot,
 	disconnectResellerTelegramBot,
 	pauseResellerTelegramBot,
-	reviewTelegramBotOrder
+	reviewTelegramBotOrder,
+	syncResellerTelegramBotStatus
 } from '$lib/server/resellers';
 import { z } from 'zod';
 
@@ -389,6 +390,25 @@ export const disconnectTelegramBotCommand = command(async () => {
 	await disconnectResellerTelegramBot(reseller.id);
 	await getResellerState().set(await buildState());
 	return { telegramBotSuccess: 'بات تلگرام قطع شد.' };
+});
+
+export const checkTelegramBotCommand = command(async () => {
+	const reseller = await requireReseller();
+	if (!reseller) return { telegramBotError: 'نشست شما منقضی شده است. دوباره وارد شوید.' };
+	try {
+		checkActionRateLimit('telegram-bot-check', reseller.id);
+		const info = await syncResellerTelegramBotStatus(reseller.id);
+		await getResellerState().set(await buildState());
+		return {
+			telegramBotSuccess: info.issue
+				? `تلگرام خطا گزارش کرده است: ${info.issue}`
+				: 'وبهوک تلگرام سالم است.'
+		};
+	} catch (error) {
+		return {
+			telegramBotError: error instanceof Error ? error.message : 'بررسی وبهوک انجام نشد.'
+		};
+	}
 });
 
 export const reviewTelegramOrderCommand = command(

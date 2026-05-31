@@ -19,6 +19,17 @@ export type TelegramBotIdentity = {
 	displayName: string;
 };
 
+export type TelegramWebhookInfo = {
+	url: string;
+	has_custom_certificate?: boolean;
+	pending_update_count: number;
+	last_error_date?: number;
+	last_error_message?: string;
+	last_synchronization_error_date?: number;
+	max_connections?: number;
+	allowed_updates?: string[];
+};
+
 function getTokenSecret() {
 	return env.TELEGRAM_BOT_TOKEN_SECRET?.trim() ?? '';
 }
@@ -147,6 +158,10 @@ export async function setTelegramWebhook(
 		},
 		proxyUrl
 	);
+}
+
+export async function getTelegramWebhookInfo(token: string, proxyUrl = '') {
+	return telegramApiRequest<TelegramWebhookInfo>(token, 'getWebhookInfo', {}, proxyUrl);
 }
 
 export async function deleteTelegramWebhook(token: string, proxyUrl = '') {

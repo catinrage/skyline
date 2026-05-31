@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import {
+		checkTelegramBotCommand,
 		connectTelegramBotCommand,
 		disconnectTelegramBotCommand,
 		pauseTelegramBotCommand,
@@ -75,6 +76,15 @@
 		if (result?.telegramBotError) toast.error(result.telegramBotError);
 	}
 
+	async function checkWebhook() {
+		const result = await checkTelegramBotCommand().updates(resellerState);
+		if (result?.telegramBotSuccess) {
+			if (result.telegramBotSuccess.includes('خطا')) toast.warning(result.telegramBotSuccess);
+			else toast.success(result.telegramBotSuccess);
+		}
+		if (result?.telegramBotError) toast.error(result.telegramBotError);
+	}
+
 	async function review(orderId: number, action: 'approve' | 'reject' | 'retry') {
 		const result = await reviewTelegramOrderCommand({ orderId, action, note: '' }).updates(resellerState);
 		if (result?.telegramOrderSuccess) toast.success(result.telegramOrderSuccess);
@@ -89,30 +99,40 @@
 		<div class="va-card empty">برای اتصال بات تلگرام باید مدیر، مجوز این فروشنده را فعال کند.</div>
 	{:else}
 		<section class="va-card bot-card">
-			<div>
-				<div class="va-section-label">اتصال بات فروش</div>
+			<div class="bot-heading">
+				<div>
+					<div class="va-section-label">اتصال بات فروش</div>
+					<h3>{data.telegramBot ? data.telegramBot.displayName || data.telegramBot.username : 'باتی متصل نیست'}</h3>
+				</div>
 				{#if data.telegramBot}
-					<h3>{data.telegramBot.displayName || data.telegramBot.username}</h3>
-					<p dir="ltr">@{data.telegramBot.username || data.telegramBot.id}</p>
 					<span class="status {data.telegramBot.status}">{data.telegramBot.status}</span>
-					{#if data.telegramBot.lastError}
-						<p class="error">{data.telegramBot.lastError}</p>
-					{/if}
-				{:else}
-					<h3>باتی متصل نیست</h3>
-					<p>توکن BotFather را وارد کنید؛ شناسه بات و وبهوک به‌صورت خودکار تنظیم می‌شود.</p>
 				{/if}
 			</div>
 
-			<div class="bot-actions">
-				<input bind:value={token} type="password" dir="ltr" placeholder="123456:ABC..." autocomplete="off" />
-				<button type="button" class="admin-btn admin-btn-primary" onclick={connect}>اتصال / جایگزینی</button>
-				{#if data.telegramBot}
-					<button type="button" class="admin-btn admin-btn-ghost" onclick={() => pause(data.telegramBot?.status === 'active')}>
-						{data.telegramBot.status === 'active' ? 'توقف' : 'فعال‌سازی'}
-					</button>
-					<button type="button" class="admin-btn admin-btn-danger" onclick={disconnect}>قطع کامل</button>
+			{#if data.telegramBot}
+				<div class="bot-meta">
+					<div><span>نام کاربری</span><strong dir="ltr">@{data.telegramBot.username || data.telegramBot.id}</strong></div>
+					<div><span>وبهوک</span><strong dir="ltr">{data.telegramBot.webhookUrl}</strong></div>
+				</div>
+				{#if data.telegramBot.lastError}
+					<p class="error-box">{data.telegramBot.lastError}</p>
 				{/if}
+			{:else}
+				<p class="muted">توکن BotFather را وارد کنید؛ Skyline شناسه بات را می‌خواند و وبهوک را خودکار ثبت می‌کند.</p>
+			{/if}
+
+			<div class="connect-row">
+				<input bind:value={token} type="password" dir="ltr" placeholder="123456:ABC..." autocomplete="off" />
+				<div class="bot-actions">
+					<button type="button" class="admin-btn admin-btn-primary" onclick={connect}>اتصال / جایگزینی</button>
+					{#if data.telegramBot}
+						<button type="button" class="admin-btn admin-btn-ghost" onclick={checkWebhook}>بررسی وبهوک</button>
+						<button type="button" class="admin-btn admin-btn-ghost" onclick={() => pause(data.telegramBot?.status === 'active')}>
+							{data.telegramBot.status === 'active' ? 'توقف' : 'فعال‌سازی'}
+						</button>
+						<button type="button" class="admin-btn admin-btn-danger" onclick={disconnect}>قطع کامل</button>
+					{/if}
+				</div>
 			</div>
 		</section>
 
@@ -158,16 +178,69 @@
 		gap: 14px;
 	}
 
-	.bot-card,
+	.bot-card {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+		padding: 18px;
+	}
+
 	.order-card {
 		display: flex;
 		justify-content: space-between;
 		gap: 18px;
 	}
 
+	.bot-heading {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 14px;
+	}
+
 	.bot-card h3 {
 		margin: 6px 0;
 		font-size: 1.2rem;
+	}
+
+	.bot-meta {
+		display: grid;
+		grid-template-columns: minmax(180px, 0.6fr) minmax(260px, 1.4fr);
+		gap: 10px;
+	}
+
+	.bot-meta div {
+		min-width: 0;
+		border: 1px solid var(--va-border);
+		border-radius: 8px;
+		background: var(--va-bg-raised);
+		padding: 10px 12px;
+	}
+
+	.bot-meta span,
+	.muted {
+		color: var(--va-text-muted);
+	}
+
+	.bot-meta span {
+		display: block;
+		margin-bottom: 6px;
+		font-size: 11px;
+	}
+
+	.bot-meta strong {
+		display: block;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		color: var(--va-text);
+	}
+
+	.connect-row {
+		display: grid;
+		grid-template-columns: minmax(240px, 420px) 1fr;
+		gap: 10px;
+		align-items: center;
 	}
 
 	.bot-actions,
@@ -178,8 +251,8 @@
 		flex-wrap: wrap;
 	}
 
-	.bot-actions input {
-		min-width: 280px;
+	.connect-row input {
+		width: 100%;
 		border: 1px solid var(--va-border);
 		border-radius: 8px;
 		padding: 10px 12px;
@@ -206,6 +279,15 @@
 		color: #dc2626;
 	}
 
+	.error-box {
+		margin: 0;
+		border: 1px solid rgba(220, 38, 38, 0.28);
+		border-radius: 8px;
+		background: rgba(220, 38, 38, 0.08);
+		padding: 10px 12px;
+		color: #f87171;
+	}
+
 	.order-main {
 		display: flex;
 		flex-direction: column;
@@ -218,13 +300,14 @@
 	}
 
 	@media (max-width: 760px) {
-		.bot-card,
+		.bot-heading,
 		.order-card {
 			flex-direction: column;
 		}
 
-		.bot-actions input {
-			min-width: 100%;
+		.bot-meta,
+		.connect-row {
+			grid-template-columns: 1fr;
 		}
 	}
 </style>

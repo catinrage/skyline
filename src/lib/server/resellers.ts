@@ -58,6 +58,7 @@ import {
 	deleteTelegramWebhook,
 	encryptTelegramToken,
 	getTelegramBotIdentity,
+	getTelegramWebhookInfo,
 	hasTelegramTokenSecret,
 	sendTelegramMessage,
 	setTelegramWebhook
@@ -3066,13 +3067,15 @@ export async function connectResellerTelegramBot(
 		webhookSecret,
 		settings.telegramBotSocksProxyUrl
 	);
+	const webhookInfo = await getTelegramWebhookInfo(cleanToken, settings.telegramBotSocksProxyUrl);
+	const webhookError = webhookInfo.last_error_message ?? '';
 
 	const now = nowSeconds();
 	await run(
 		`INSERT INTO reseller_telegram_bots (
 			reseller_id, bot_id, username, display_name, token_encrypted, webhook_secret,
 			webhook_path_secret, status, webhook_url, last_error, last_update_at, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, '', NULL, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, NULL, ?, ?)
 		ON CONFLICT(reseller_id) DO UPDATE SET
 			bot_id = excluded.bot_id,
 			username = excluded.username,
@@ -3082,7 +3085,7 @@ export async function connectResellerTelegramBot(
 			webhook_path_secret = excluded.webhook_path_secret,
 			status = 'active',
 			webhook_url = excluded.webhook_url,
-			last_error = '',
+			last_error = excluded.last_error,
 			updated_at = excluded.updated_at`,
 		[
 			resellerId,
@@ -3093,6 +3096,7 @@ export async function connectResellerTelegramBot(
 			webhookSecret,
 			pathSecret,
 			webhookUrl,
+			webhookError,
 			now,
 			now
 		]
@@ -3128,6 +3132,37 @@ export async function disconnectResellerTelegramBot(resellerId: number) {
 	await run('DELETE FROM reseller_telegram_bots WHERE reseller_id = ?', [resellerId]);
 }
 
+export async function syncResellerTelegramBotStatus(resellerId: number) {
+	await ensureResellerTables();
+	const row = await getTelegramBotRowByResellerId(resellerId);
+	if (!row) throw new Error('بات تلگرام وصل نیست.');
+	const settings = await getFeatureSettings();
+	const info = await getTelegramWebhookInfo(
+		decryptTelegramToken(row.token_encrypted),
+		settings.telegramBotSocksProxyUrl
+	);
+	const issue =
+		info.url !== row.webhook_url
+			? 'وبهوک ثبت‌شده در تلگرام با آدرس ذخیره‌شده Skyline یکی نیست. بات را دوباره متصل کنید.'
+			: (info.last_error_message ?? '');
+	const nextStatus: TelegramBotStatus = row.status === 'paused' || row.status === 'disabled'
+		? row.status
+		: issue
+			? 'error'
+			: 'active';
+	await run(
+		`UPDATE reseller_telegram_bots
+		 SET status = ?, last_error = ?, updated_at = ?
+		 WHERE id = ?`,
+		[nextStatus, issue.slice(0, 500), nowSeconds(), row.id]
+	);
+	return {
+		...info,
+		status: nextStatus,
+		issue
+	};
+}
+
 async function getDefaultTelegramInbound(account: ResellerAccountRow) {
 	const inbound = (await getXuiInboundOptions()).find(
 		(item) => item.enable && isInboundAllowedForAccount(account, item.id)
@@ -3155,14 +3190,14 @@ export async function getTelegramWebhookContext(secret: string, secretToken: str
 	if (!account || account.is_active !== 1 || account.telegram_bot_allowed !== 1) return null;
 	if (account.parent_reseller_id !== null) return null;
 	if (!(await isFeatureEnabled('telegram_sales_bot'))) return null;
-	if (bot.status !== 'active') return null;
+	if (bot.status === 'paused' || bot.status === 'disabled') return null;
 	return { bot, account, token: decryptTelegramToken(bot.token_encrypted) };
 }
 
 export async function touchTelegramBotUpdate(botId: number) {
 	await ensureResellerTables();
 	await run(
-		`UPDATE reseller_telegram_bots SET last_update_at = ?, last_error = '', updated_at = ? WHERE id = ?`,
+		`UPDATE reseller_telegram_bots SET status = 'active', last_update_at = ?, last_error = '', updated_at = ? WHERE id = ?`,
 		[nowSeconds(), nowSeconds(), botId]
 	);
 }
