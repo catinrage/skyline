@@ -44,6 +44,7 @@ import {
 	createResellerCreditPackage,
 	createResellerPlan,
 	deleteResellerAccount,
+	hardDeleteResellerAccount,
 	getAdminResellerOverview,
 	getResellerCreditPackages,
 	getResellerCreditRequests,
@@ -1170,6 +1171,32 @@ export const deleteReseller = form(
 
 		return {
 			resellerDeleteSuccess: 'حساب فروشنده حذف شد.'
+		};
+	}
+);
+export const hardDeleteReseller = form(
+	z.object({
+		id: z.coerce.number().int().positive()
+	}),
+	async ({ id }) => {
+		const cookies = await requireAdminSession();
+
+		if (!cookies) {
+			return { resellerHardDeleteError: 'دسترسی غیرمجاز.' };
+		}
+
+		try {
+			await hardDeleteResellerAccount(id);
+		} catch (error) {
+			return {
+				resellerHardDeleteError: error instanceof Error ? error.message : 'حذف کامل فروشنده انجام نشد.'
+			};
+		}
+
+		await getManageState().set(await buildManageState(true));
+
+		return {
+			resellerHardDeleteSuccess: 'حساب و تمامی کانفیگ‌های فروشنده حذف شد.'
 		};
 	}
 );

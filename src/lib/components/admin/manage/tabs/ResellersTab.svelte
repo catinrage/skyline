@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import { browser } from '$app/environment';
 	import { scale } from 'svelte/transition';
 	import InspectorPortal from '$lib/components/admin/InspectorPortal.svelte';
 	import { toast } from 'svelte-sonner';
@@ -10,11 +11,13 @@
 	import VaStatRow from '$lib/components/admin/va/VaStatRow.svelte';
 	import VaStatusDot from '$lib/components/admin/va/VaStatusDot.svelte';
 	import VaCheckbox from '$lib/components/admin/va/VaCheckbox.svelte';
+	import VaInboundPicker from '$lib/components/admin/va/VaInboundPicker.svelte';
 	import Modal from '$lib/components/admin/Modal.svelte';
 	import ConfirmDialog from '$lib/components/admin/ConfirmDialog.svelte';
 	import {
 		createReseller,
 		deleteReseller,
+		hardDeleteReseller,
 		resetResellerPassword,
 		toggleAllResellerConfigs,
 		toggleReseller,
@@ -288,6 +291,20 @@
 		if (result?.resellerDeleteError) toast.error(result.resellerDeleteError);
 	}
 
+
+	async function handleHardDelete(
+		form: ReturnType<typeof hardDeleteReseller.for>,
+		submit: () => Promise<void>
+	) {
+		await submit();
+		const result = form.result;
+		if (result?.resellerHardDeleteSuccess) {
+			toast.success(result.resellerHardDeleteSuccess as string);
+			selected = null;
+		}
+		if (result?.resellerHardDeleteError) toast.error(result.resellerHardDeleteError as string);
+	}
+
 	async function handlePasswordReset(
 		form: ReturnType<typeof resetResellerPassword.for>,
 		submit: () => Promise<void>,
@@ -384,6 +401,23 @@
 		deleteConfirmResolve = null;
 	}
 
+	let hardDeleteConfirmOpen = $state(false);
+	let hardDeleteConfirmUsername = $state('');
+	let hardDeleteConfirmResolve: ((v: boolean) => void) | null = null;
+
+	function awaitHardDeleteConfirm(username: string): Promise<boolean> {
+		return new Promise((resolve) => {
+			hardDeleteConfirmUsername = username;
+			hardDeleteConfirmOpen = true;
+			hardDeleteConfirmResolve = resolve;
+		});
+	}
+	function resolveHardDelete(confirmed: boolean) {
+		hardDeleteConfirmOpen = false;
+		hardDeleteConfirmResolve?.(confirmed);
+		hardDeleteConfirmResolve = null;
+	}
+
 	async function handleInboundAccess(
 		form: ReturnType<typeof updateResellerInbounds.for>,
 		submit: () => Promise<void>
@@ -406,6 +440,12 @@
 			window.removeEventListener('scroll', closeOnOutside, true);
 		};
 	});
+
+	function portal(node: HTMLElement) {
+		if (!browser) return;
+		document.body.appendChild(node);
+		return { destroy() { node.remove(); } };
+	}
 </script>
 
 <InspectorPortal content={resellerInspector} />
@@ -867,24 +907,17 @@
 				>
 					<input type="hidden" name="id" value={selected.id} />
 					<div class="va-section-label">سرورهای مجاز فروش</div>
-					<div class="inbound-access-box">
-						{#if (data.inboundOptions ?? []).length === 0}
-							<div class="field-hint">لیست inbound در دسترس نیست.</div>
-						{:else}
-							{#each data.inboundOptions ?? [] as inbound (inbound.id)}
-								<VaCheckbox
-									name="allowedInboundIds"
-									value={inbound.id}
-									checked={!selected.allowedInboundIds || selected.allowedInboundIds.includes(inbound.id)}
-									label={inbound.remark || `Inbound #${inbound.id}`}
-								/>
-							{/each}
-							<div class="field-hint">اگر هیچ گزینه‌ای ذخیره نشود، همه سرورها مجاز خواهند بود.</div>
-							<button type="submit" class="admin-btn admin-btn-ghost full-width" disabled={inboundForm.pending > 0}>
-								{inboundForm.pending > 0 ? 'در حال ذخیره...' : 'ذخیره دسترسی سرورها'}
-							</button>
-						{/if}
-					</div>
+					{#if (data.inboundOptions ?? []).length === 0}
+						<div class="field-hint">لیست inbound در دسترس نیست.</div>
+					{:else}
+						<VaInboundPicker
+							options={data.inboundOptions ?? []}
+							selected={selected.allowedInboundIds}
+						/>
+						<button type="submit" class="admin-btn admin-btn-ghost full-width" style="margin-top:6px" disabled={inboundForm.pending > 0}>
+							{inboundForm.pending > 0 ? 'در حال ذخیره...' : 'ذخیره دسترسی سرورها'}
+						</button>
+					{/if}
 				</form>
 
 				<div>
@@ -940,6 +973,24 @@
 						{:else if selected.deleteBlockedReason}
 							<div class="delete-blocked">{selected.deleteBlockedReason}</div>
 						{/if}
+
+						{@const hardDeleteForm = hardDeleteReseller.for(selected.id)}
+						<form {...hardDeleteForm.enhance(async ({ submit }) => {
+							const confirmed = await awaitHardDeleteConfirm(selected.username);
+							if (!confirmed) return;
+							await handleHardDelete(hardDeleteForm, submit);
+						})}>
+							<input type="hidden" name="id" value={selected.id} />
+							<button
+								type="button"
+								class="va-action-row danger hard-delete-btn"
+								disabled={hardDeleteForm.pending > 0}
+							>
+								<AnimatedIcon name="spark-down" size={13} />
+								<span>{hardDeleteForm.pending > 0 ? 'در حال حذف...' : 'حذف کامل + کانفیگ‌ها'}</span>
+								<AnimatedIcon name="chevron-left" size={12} />
+							</button>
+						</form>
 					</div>
 				</div>
 				{/if}
@@ -985,7 +1036,7 @@
 			}}
 		>
 			<span class="mdi mdi-lock-reset"></span>
-			<span>ریست گذرواژه به 1234</span>
+			<span>بازنشانی گذرواژه</span>
 		</button>
 	</div>
 {/if}
@@ -1064,15 +1115,34 @@
 {/if}
 
 {#if passwordRevealed}
-	<div class="va-modal-backdrop" dir="rtl">
-		<div class="va-modal-card">
-			<div class="va-modal-icon">
-				<AnimatedIcon name="key" size={16} active />
-			</div>
-			<div>
-				<div class="va-section-label">گذرواژه جدید</div>
-				<h3>بازنشانی انجام شد</h3>
-				<p>گذرواژه «{passwordRevealed.username}» تغییر کرد. این گذرواژه را برای فروشنده ارسال کنید.</p>
+	<div
+		use:portal
+		class="va-modal-backdrop"
+		dir="rtl"
+		role="dialog"
+		aria-modal="true"
+		onclick={() => (passwordRevealed = null)}
+		onkeydown={(e) => e.key === 'Escape' && (passwordRevealed = null)}
+		tabindex="-1"
+	>
+		<div class="va-modal-card" onclick={(e) => e.stopPropagation()} role="presentation">
+			<div class="va-modal-card-head">
+				<div class="va-modal-icon">
+					<AnimatedIcon name="key" size={16} active />
+				</div>
+				<div class="va-modal-head-copy">
+					<div class="va-section-label">گذرواژه جدید</div>
+					<h3>بازنشانی انجام شد</h3>
+					<p>گذرواژه «{passwordRevealed.username}» تغییر کرد. این گذرواژه را برای فروشنده ارسال کنید.</p>
+				</div>
+				<button
+					type="button"
+					class="va-modal-close"
+					aria-label="بستن"
+					onclick={() => (passwordRevealed = null)}
+				>
+					<span class="mdi mdi-close"></span>
+				</button>
 			</div>
 			<div class="password-reveal-box">
 				<code class="password-reveal-code" dir="ltr">{passwordRevealed.password}</code>
@@ -1157,6 +1227,17 @@
 	intent="danger"
 	onConfirm={() => resolveDelete(true)}
 	onClose={() => resolveDelete(false)}
+/>
+
+<ConfirmDialog
+	open={hardDeleteConfirmOpen}
+	title="حذف کامل فروشنده"
+	description="حساب «{hardDeleteConfirmUsername}»، تمام کانفیگ‌های فعال در x-ui و تمام سوابق مالی برای همیشه پاک می‌شوند. این عملیات غیرقابل بازگشت است."
+	confirmLabel="حذف کامل"
+	cancelLabel="انصراف"
+	intent="danger"
+	onConfirm={() => resolveHardDelete(true)}
+	onClose={() => resolveHardDelete(false)}
 />
 
 <style>
@@ -1628,7 +1709,7 @@
 	.va-modal-backdrop {
 		position: fixed;
 		inset: 0;
-		z-index: 1000;
+		z-index: 130;
 		display: grid;
 		place-items: center;
 		padding: 18px;
@@ -1647,6 +1728,37 @@
 		background: var(--va-bg-panel);
 		color: var(--va-text);
 		box-shadow: 0 24px 70px rgb(0 0 0 / 48%);
+	}
+
+	.va-modal-card-head {
+		display: flex;
+		align-items: flex-start;
+		gap: 12px;
+	}
+
+	.va-modal-head-copy {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.va-modal-close {
+		flex: 0 0 auto;
+		display: grid;
+		place-items: center;
+		width: 28px;
+		height: 28px;
+		border: 1px solid var(--va-border);
+		border-radius: 6px;
+		background: var(--va-bg-raised);
+		color: var(--va-text-muted);
+		cursor: pointer;
+		font-size: 14px;
+		transition: background-color 0.15s, color 0.15s;
+	}
+
+	.va-modal-close:hover {
+		background: var(--va-bg-panel);
+		color: var(--va-text);
 	}
 
 	.va-modal-card h3 {

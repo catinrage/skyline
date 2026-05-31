@@ -885,14 +885,9 @@ function buildDailySummary(
 	};
 }
 
-function buildUserPageUrl(origin: string, uuid: string, resellerUsername?: string | null) {
-	const url = new URL(`/user/${uuid}`, origin);
-
-	if (resellerUsername?.trim()) {
-		url.searchParams.set('ri', resellerUsername.trim());
-	}
-
-	return url.toString();
+function buildUserPageUrl(origin: string, uuid: string, _resellerUsername?: string | null) {
+	// Owner attribution is now stored in DB (getResellerOwnerByClientUuid), no ?ri= needed
+	return new URL(`/user/${uuid}`, origin).toString();
 }
 
 function buildRequestView(
@@ -2720,6 +2715,40 @@ export async function deleteResellerAccount(id: number) {
 	await run('DELETE FROM reseller_credit_package_access WHERE reseller_id = ?', [id]);
 }
 
+export async function hardDeleteResellerAccount(id: number) {
+	await ensureResellerTables();
+	const account = await getResellerAccountById(id);
+
+	if (!account) {
+		throw new Error('حساب فروشنده پیدا نشد.');
+	}
+
+	// Remove all active xui configs for this reseller first
+	const requests = await getResellerRequestsByResellerId(id);
+	const activeRequests = requests.filter((r) => r.revokedAt === null);
+	await Promise.allSettled(activeRequests.map((r) => deleteVpnClient(r.xuiEmail)));
+
+	// Wipe all related DB records
+	await run('DELETE FROM reseller_charges WHERE reseller_id = ?', [id]);
+	await run('DELETE FROM reseller_gb_ledger WHERE reseller_id = ?', [id]);
+	await run('DELETE FROM reseller_requests WHERE reseller_id = ?', [id]);
+	await run('DELETE FROM reseller_payments WHERE reseller_id = ?', [id]);
+	await run('DELETE FROM reseller_sessions WHERE reseller_id = ?', [id]);
+	await run('DELETE FROM reseller_config_templates WHERE reseller_id = ?', [id]);
+	await run('DELETE FROM reseller_credit_package_access WHERE reseller_id = ?', [id]);
+	await run('DELETE FROM reseller_credit_requests WHERE reseller_id = ?', [id]);
+	const ticketIds = await query(
+		'SELECT id FROM reseller_tickets WHERE reseller_id = ?',
+		[id]
+	) as Array<{ id: number }>;
+	for (const t of ticketIds) {
+		await run('DELETE FROM reseller_ticket_messages WHERE ticket_id = ?', [t.id]);
+	}
+	await run('DELETE FROM reseller_tickets WHERE reseller_id = ?', [id]);
+	await run('DELETE FROM reseller_plan_access WHERE reseller_id = ?', [id]);
+	await run('DELETE FROM reseller_accounts WHERE id = ?', [id]);
+}
+
 export async function updateResellerDebtCap(id: number, debtCapToman: number | null) {
 	await ensureResellerTables();
 	await run('UPDATE reseller_accounts SET debt_cap_toman = ?, updated_at = ? WHERE id = ?', [
@@ -3448,7 +3477,7 @@ export async function createResellerRequest(
 		inboundId: plan.inboundId,
 		uuid,
 		email: xuiEmail,
-		totalBytes: plan.quotaGb * 1024 ** 3,
+		totalBytes: Math.round(plan.quotaGb * 1024 ** 3),
 		expiryTime: expiresAtMs,
 		enable: true
 	});
@@ -3643,7 +3672,7 @@ export async function createCustomResellerRequest(
 		inboundId: input.inboundId,
 		uuid,
 		email: xuiEmail,
-		totalBytes: normalizedQuotaGb * 1024 ** 3,
+		totalBytes: Math.round(normalizedQuotaGb * 1024 ** 3),
 		expiryTime: expiresAtMs,
 		enable: true
 	});
@@ -3829,7 +3858,7 @@ export async function createAdminVpnConfig(
 		inboundId,
 		uuid,
 		email: xuiEmail,
-		totalBytes: values.quotaGb * 1024 ** 3,
+		totalBytes: Math.round(values.quotaGb * 1024 ** 3),
 		expiryTime: expiresAtMs,
 		enable: true
 	});
@@ -4096,7 +4125,7 @@ export async function rechargeResellerRequest(
 		const email = await updateVpnClient({
 			inboundId: request.xuiInboundId,
 			uuid: request.xuiClientUuid,
-			totalBytes: rechargeQuotaGb * 1024 ** 3,
+			totalBytes: Math.round(rechargeQuotaGb * 1024 ** 3),
 			expiryTime: expiresAtMs,
 			enable: true
 		});
@@ -4138,7 +4167,7 @@ export async function rechargeResellerRequest(
 				await updateVpnClient({
 					inboundId: request.xuiInboundId,
 					uuid: request.xuiClientUuid,
-					totalBytes: rechargeQuotaGb * 1024 ** 3,
+					totalBytes: Math.round(rechargeQuotaGb * 1024 ** 3),
 					expiryTime: expiresAtMs,
 					enable: false
 				});
@@ -5551,7 +5580,7 @@ export async function managerRenewConfig(requestId: number, fallbackHost?: strin
 	const email = await updateVpnClient({
 		inboundId: request.xuiInboundId,
 		uuid: request.xuiClientUuid,
-		totalBytes: request.quotaGbSnapshot * 1024 ** 3,
+		totalBytes: Math.round(request.quotaGbSnapshot * 1024 ** 3),
 		expiryTime: expiresAtMs,
 		enable: true
 	});
@@ -5584,7 +5613,7 @@ export async function managerAddQuota(requestId: number, addGb: number, fallback
 	if (!liveUsage) throw new Error('کانفیگ در x-ui پیدا نشد.');
 
 	const currentTotalBytes = liveUsage.totalBytes ?? 0;
-	const newTotalBytes = currentTotalBytes + addGb * 1024 ** 3;
+	const newTotalBytes = currentTotalBytes + Math.round(addGb * 1024 ** 3);
 
 	await updateVpnClient({
 		inboundId: request.xuiInboundId,
