@@ -1263,7 +1263,7 @@
 	}
 
 	.next-page {
-		transform: rotate(180deg);
+		transform: rotate(0deg);
 	}
 
 	.avatar-cell {

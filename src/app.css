@@ -1499,17 +1499,23 @@ button:not(:disabled):hover {
 
 @media (max-width: 760px) {
 	.va-toolbar {
-		overflow-x: auto;
-		flex-wrap: nowrap;
-		scrollbar-width: none;
-	}
-
-	.va-toolbar::-webkit-scrollbar {
-		display: none;
+		flex-wrap: wrap;
+		gap: 6px;
 	}
 
 	.va-toolbar-search {
-		min-width: 220px;
+		flex: 1 1 100%;
+		min-width: 0;
+	}
+
+	.va-divider-vertical {
+		display: none;
+	}
+
+	/* chips row: let them scroll horizontally */
+	.va-toolbar .va-chip,
+	.va-toolbar .toolbar-spacer {
+		white-space: nowrap;
 	}
 
 	.va-table-wrap.desktop-only {
