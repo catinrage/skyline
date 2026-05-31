@@ -126,11 +126,11 @@
 	}
 
 	function getLatencyColor(latencyMs: number) {
-		if (latencyMs <= 400) return 'rgb(45 255 155)';
+		if (latencyMs <= 400) return 'rgb(0 178 102)';
 		if (latencyMs <= 800) {
-			return blendColor([45, 255, 155], [255, 224, 84], (latencyMs - 400) / 400);
+			return blendColor([0, 178, 102], [188, 132, 0], (latencyMs - 400) / 400);
 		}
-		return blendColor([255, 224, 84], [255, 75, 88], (latencyMs - 800) / 400);
+		return blendColor([188, 132, 0], [210, 45, 58], (latencyMs - 800) / 400);
 	}
 
 	function handleSpeedEvent(event: SpeedStreamEvent) {

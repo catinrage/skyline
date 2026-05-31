@@ -15,7 +15,8 @@
 	const isAdminRoute = $derived(
 		/^\/(manage|reseller)(\/|$)/.test(page.url.pathname) ||
 			/^\/[^/]+\/(manager|manage|reseller)(\/|$)/.test(page.url.pathname) ||
-			/^\/user\//.test(page.url.pathname)
+			/^\/user\//.test(page.url.pathname) ||
+			/^\/(?:[^/]+\/)?login\/?$/.test(page.url.pathname)
 	);
 
 	function applyTheme(nextTheme: ThemeMode) {

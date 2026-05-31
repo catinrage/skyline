@@ -351,6 +351,11 @@
 			border-bottom: 1px solid var(--va-border);
 		}
 
+		.va-brand-row {
+			direction: rtl;
+			justify-content: flex-start;
+		}
+
 		.va-shortcuts {
 			display: none;
 		}
