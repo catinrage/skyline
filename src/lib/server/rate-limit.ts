@@ -10,6 +10,7 @@ const MAX_REQUESTS = 35;
 const ADMIN_LOGIN_MAX_REQUESTS = 5;
 const requestsByIp = new Map<string, RateLimitEntry>();
 const requestsByResellerAction = new Map<string, RateLimitEntry>();
+const requestsByIpAction = new Map<string, RateLimitEntry>();
 const adminLoginAttemptsByIp = new Map<string, RateLimitEntry>();
 const rateLimitLogger = logger.child('rate-limit');
 
@@ -80,6 +81,60 @@ export function checkAdminLoginRateLimit(ip: string): { allowed: boolean; retryA
 	current.count += 1;
 
 	return { allowed: true, retryAfter: 0 };
+}
+
+export function checkIpActionRateLimit(
+	action: string,
+	ip: string,
+	options?: {
+		maxRequests?: number;
+		windowMs?: number;
+	}
+): { allowed: boolean; retryAfter: number } {
+	const now = Date.now();
+	const windowMs = options?.windowMs ?? 60_000;
+	const maxRequests = options?.maxRequests ?? 20;
+	const key = `${action}:${ip}`;
+	const current = requestsByIpAction.get(key);
+
+	if (!current || current.resetAt <= now) {
+		if (current && current.resetAt <= now) {
+			requestsByIpAction.delete(key);
+		}
+
+		requestsByIpAction.set(key, {
+			count: 1,
+			resetAt: now + windowMs
+		});
+
+		return {
+			allowed: true,
+			retryAfter: 0
+		};
+	}
+
+	if (current.count >= maxRequests) {
+		const retryAfter = Math.max(1, Math.ceil((current.resetAt - now) / 1000));
+		rateLimitLogger.warn('IP action rate limit exceeded.', {
+			action,
+			ip,
+			retryAfter,
+			windowMs,
+			maxRequests
+		});
+
+		return {
+			allowed: false,
+			retryAfter
+		};
+	}
+
+	current.count += 1;
+
+	return {
+		allowed: true,
+		retryAfter: 0
+	};
 }
 
 export function checkResellerActionRateLimit(
