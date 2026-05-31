@@ -300,7 +300,7 @@
 		const result = form.result;
 		if (result?.resellerHardDeleteSuccess) {
 			toast.success(result.resellerHardDeleteSuccess as string);
-			selected = null;
+			selectedId = null;
 		}
 		if (result?.resellerHardDeleteError) toast.error(result.resellerHardDeleteError as string);
 	}
