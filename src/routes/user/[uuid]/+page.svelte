@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { toast } from 'svelte-sonner';
+	import NumberFlow from '@number-flow/svelte';
 	import Brand from '$lib/components/admin/Brand.svelte';
 	import Modal from '$lib/components/admin/Modal.svelte';
 	import ImagePreviewModal from '$lib/components/admin/ImagePreviewModal.svelte';
@@ -15,6 +16,16 @@
 	type PageData = {
 		initialUserPanel: UserPanelData;
 	};
+
+	type TrafficNumber = {
+		value: number;
+		unit: 'KB' | 'MB' | 'GB';
+		maximumFractionDigits: number;
+	};
+
+	const kilobyte = 1024;
+	const megabyte = kilobyte ** 2;
+	const gigabyte = kilobyte ** 3;
 
 	let { data }: { data: PageData } = $props();
 
@@ -47,7 +58,6 @@
 		panelData.client.usageRatio === null ? 0 : Math.round(Math.min(100, Math.max(0, panelData.client.usageRatio * 100)))
 	);
 	const quotaText = $derived(panelData.client.totalBytes === null ? 'نامحدود' : formatTraffic(panelData.client.totalBytes, { maximumFractionDigits: 0 }));
-	const remainingText = $derived(panelData.client.remainingBytes === null ? 'نامحدود' : formatTraffic(panelData.client.remainingBytes));
 	const pingWidgetEnabled = $derived(panelData.features.proxyPing);
 	const speedWidgetEnabled = $derived(panelData.features.speedTestWidget);
 	const pingAllowed = $derived(canUseOperationalActions(panelData.client.status));
@@ -58,6 +68,9 @@
 	const latencyButtonLabel = $derived(
 		measurePing.pending > 0 ? 'در حال تست...' : lastPingMs === null ? 'تست تاخیر' : `${lastPingMs}ms`
 	);
+	const usedTraffic = $derived(getTrafficNumber(panelData.client.usedBytes));
+	const quotaTraffic = $derived(panelData.client.totalBytes === null ? null : getTrafficNumber(panelData.client.totalBytes, 0));
+	const remainingTraffic = $derived(panelData.client.remainingBytes === null ? null : getTrafficNumber(panelData.client.remainingBytes));
 
 	async function refreshPanel() {
 		refreshPulse = true;
@@ -123,6 +136,18 @@
 		const boundedRatio = Math.min(1, Math.max(0, ratio));
 		const channel = (index: number) => Math.round(start[index] + (end[index] - start[index]) * boundedRatio);
 		return `rgb(${channel(0)} ${channel(1)} ${channel(2)})`;
+	}
+
+	function getTrafficNumber(bytes: number, maximumFractionDigits = 2): TrafficNumber {
+		if (Math.abs(bytes) >= gigabyte) {
+			return { value: bytes / gigabyte, unit: 'GB', maximumFractionDigits };
+		}
+
+		if (Math.abs(bytes) >= megabyte) {
+			return { value: bytes / megabyte, unit: 'MB', maximumFractionDigits };
+		}
+
+		return { value: bytes / kilobyte, unit: 'KB', maximumFractionDigits };
 	}
 
 	function getLatencyColor(latencyMs: number) {
@@ -377,15 +402,57 @@
 					<div class="metric-side">
 						<p class="mono-label">مصرف</p>
 						<div class="big-meter">
-							<strong>{formatTraffic(state.client.usedBytes)}</strong>
-							<span>از {quotaText}</span>
+							<strong class="traffic-flow" dir="ltr">
+								<span>{usedTraffic.unit}</span>
+								<NumberFlow
+									value={usedTraffic.value}
+									locales="fa-IR-u-nu-latn"
+									format={{ useGrouping: true, maximumFractionDigits: usedTraffic.maximumFractionDigits }}
+								/>
+							</strong>
+							<span>
+								از
+								{#if quotaTraffic}
+									<span class="traffic-inline" dir="ltr">
+										<span>{quotaTraffic.unit}</span>
+										<NumberFlow
+											value={quotaTraffic.value}
+											locales="fa-IR-u-nu-latn"
+											format={{ useGrouping: true, maximumFractionDigits: quotaTraffic.maximumFractionDigits }}
+										/>
+									</span>
+								{:else}
+									نامحدود
+								{/if}
+							</span>
 						</div>
 						<div class="progress-track" aria-label={`${usagePercent}% مصرف`}>
 							<span style={`width: ${usagePercent}%`}></span>
 						</div>
 						<div class="meter-foot">
-							<span>{usagePercent}% مصرف</span>
-							<span>{remainingText} باقی</span>
+							<span>
+								<NumberFlow
+									value={usagePercent}
+									locales="fa-IR-u-nu-latn"
+									format={{ useGrouping: true, maximumFractionDigits: 0 }}
+								/>%
+								مصرف
+							</span>
+							<span>
+								{#if remainingTraffic}
+									<span class="traffic-inline" dir="ltr">
+										<span>{remainingTraffic.unit}</span>
+										<NumberFlow
+											value={remainingTraffic.value}
+											locales="fa-IR-u-nu-latn"
+											format={{ useGrouping: true, maximumFractionDigits: remainingTraffic.maximumFractionDigits }}
+										/>
+									</span>
+								{:else}
+									نامحدود
+								{/if}
+								باقی
+							</span>
 						</div>
 					</div>
 
@@ -1049,6 +1116,21 @@
 		font-weight: 600;
 		line-height: 1;
 		letter-spacing: -1px;
+	}
+
+	.traffic-flow,
+	.traffic-inline {
+		display: inline-flex;
+		align-items: baseline;
+		flex-direction: row-reverse;
+		gap: 6px;
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+		unicode-bidi: isolate;
+	}
+
+	.traffic-inline {
+		gap: 4px;
 	}
 
 	.big-meter span,
