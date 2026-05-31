@@ -313,7 +313,7 @@ sky start
 
 - Skyline talks to x-ui/3x-ui over the HTTP API. It does not read the x-ui SQLite database directly.
 - Generated links currently target VLESS inbounds and reuse stream settings from x-ui/3x-ui where available.
-- The config latency test launches a temporary local Xray client and checks connectivity through the user config.
+- The config latency test launches a temporary local Xray client and checks `https://www.gstatic.com/generate_204` through the user config by default.
 - Unlimited plans are handled when `totalGB <= 0`.
 - Some rate limits are in-memory and reset when the Skyline process restarts.
 - Bun can still be used as a package manager, but the production runtime is Node.js.
@@ -337,5 +337,5 @@ Common production issues:
 
 - `403 Forbidden` on form submit: set `ORIGIN` correctly or configure forwarded headers behind the reverse proxy.
 - x-ui data does not load: verify the x-ui/3x-ui URL and API token in the manager panel settings.
-- Latency test fails: verify the Xray binary path in manager settings and confirm `curl` exists on the server.
+- Latency test fails: verify the Xray binary path in manager settings, confirm `curl` exists on the server, and avoid `google.com` as the latency target because many datacenter/VPN routes fail its TLS handshake.
 - Emails do not arrive: verify SMTP credentials and DNS deliverability records.

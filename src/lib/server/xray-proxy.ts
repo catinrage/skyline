@@ -25,6 +25,7 @@ interface ParsedVlessConfig {
 	flow?: string;
 	host?: string;
 	path?: string;
+	mode?: string;
 	serviceName?: string;
 	headerType?: string;
 	sni?: string;
@@ -34,6 +35,7 @@ interface ParsedVlessConfig {
 	shortId?: string;
 	spiderX?: string;
 	decryption?: string;
+	extra?: unknown;
 }
 
 export interface TemporaryProxySession {
@@ -83,6 +85,18 @@ function getRandomPort() {
 	return 20_000 + Math.floor(Math.random() * 20_000);
 }
 
+function parseJsonParam(value: string | null) {
+	if (!value) {
+		return undefined;
+	}
+
+	try {
+		return JSON.parse(value);
+	} catch {
+		return undefined;
+	}
+}
+
 function parseVlessUri(configUrl: string): ParsedVlessConfig {
 	const url = new URL(configUrl);
 
@@ -105,6 +119,7 @@ function parseVlessUri(configUrl: string): ParsedVlessConfig {
 		flow: url.searchParams.get('flow') || undefined,
 		host: url.searchParams.get('host') || undefined,
 		path: url.searchParams.get('path') || undefined,
+		mode: url.searchParams.get('mode') || undefined,
 		serviceName: url.searchParams.get('serviceName') || undefined,
 		headerType: url.searchParams.get('headerType') || undefined,
 		sni: url.searchParams.get('sni') || undefined,
@@ -113,7 +128,8 @@ function parseVlessUri(configUrl: string): ParsedVlessConfig {
 		publicKey: url.searchParams.get('pbk') || undefined,
 		shortId: url.searchParams.get('sid') || undefined,
 		spiderX: url.searchParams.get('spx') || undefined,
-		decryption: url.searchParams.get('decryption') || undefined
+		decryption: url.searchParams.get('decryption') || undefined,
+		extra: parseJsonParam(url.searchParams.get('extra'))
 	};
 }
 
@@ -143,6 +159,15 @@ function createXrayConfig(parsed: ParsedVlessConfig, socksPort: number) {
 		};
 	}
 
+	if (parsed.network === 'xhttp') {
+		streamSettings.xhttpSettings = {
+			path: parsed.path || '/',
+			host: parsed.host || '',
+			mode: parsed.mode || 'auto',
+			extra: parsed.extra
+		};
+	}
+
 	if (parsed.network === 'tcp' && parsed.headerType && parsed.headerType !== 'none') {
 		streamSettings.tcpSettings = {
 			header: {
@@ -154,6 +179,7 @@ function createXrayConfig(parsed: ParsedVlessConfig, socksPort: number) {
 	if (parsed.security === 'tls') {
 		streamSettings.tlsSettings = {
 			serverName: parsed.sni,
+			fingerprint: parsed.fingerprint,
 			alpn: parsed.alpn ? [parsed.alpn] : undefined
 		};
 	}

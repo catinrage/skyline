@@ -180,7 +180,7 @@
 									type="url"
 									dir="ltr"
 									value={data.featureSettings.speedTestTargetUrl}
-									placeholder="https://link.testfile.org/30MB"
+									placeholder="http://ipv4.download.thinkbroadband.com/20MB.zip"
 								/>
 							</div>
 						{/if}

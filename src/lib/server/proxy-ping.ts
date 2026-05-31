@@ -1,7 +1,7 @@
 import { createTemporaryProxySession, runProxyCurlRequest } from '$lib/server/xray-proxy';
 import { logger } from '$lib/server/logger';
 
-const defaultProbeTargetUrl = 'https://cloudflare.com/cdn-cgi/trace';
+const defaultProbeTargetUrl = 'https://www.gstatic.com/generate_204';
 const measuredRequestCount = 5;
 const proxyPingLogger = logger.child('proxy-ping');
 
@@ -12,10 +12,19 @@ function curlError(curlStderr: string, xrayStderr: string, fallback: string) {
 	return parts.join(' | ') || fallback;
 }
 
-function parseCurlResult(statusCode: string, timeTotal: string, stderr: string) {
+function parseCurlResult(
+	statusCode: string,
+	timeTotal: string,
+	stderr: string,
+	options?: { expectNoContent?: boolean }
+) {
 	const status = Number(statusCode);
 
-	if (!Number.isInteger(status) || status < 200 || status >= 400) {
+	if (options?.expectNoContent && statusCode !== '204') {
+		throw new Error(stderr.trim() || `پاسخ نامعتبر از مقصد تست دریافت شد: ${statusCode}`);
+	}
+
+	if (!options?.expectNoContent && (!Number.isInteger(status) || status < 200 || status >= 400)) {
 		throw new Error(stderr.trim() || `پاسخ نامعتبر از مقصد تست دریافت شد: ${statusCode}`);
 	}
 
@@ -43,6 +52,7 @@ function calculateDisplayedLatency(values: number[]) {
 
 export async function measureProxyLatency(configUrl: string, targetUrl = defaultProbeTargetUrl) {
 	let session: Awaited<ReturnType<typeof createTemporaryProxySession>> | null = null;
+	const expectNoContent = targetUrl === defaultProbeTargetUrl;
 	proxyPingLogger.debug('Starting proxy latency measurement.', {
 		target: targetUrl,
 		measuredRequestCount
@@ -55,10 +65,18 @@ export async function measureProxyLatency(configUrl: string, targetUrl = default
 		});
 
 		if (warmupResult.exitCode !== 0) {
-			throw new Error(curlError(warmupResult.stderr, session.getStderr(), 'درخواست اولیه تست تاخیر از داخل پراکسی انجام نشد.'));
+			throw new Error(
+				curlError(
+					warmupResult.stderr,
+					session.getStderr(),
+					'درخواست اولیه تست تاخیر از داخل پراکسی انجام نشد.'
+				)
+			);
 		}
 
-		parseCurlResult(warmupResult.statusCode, warmupResult.timeTotal, warmupResult.stderr);
+		parseCurlResult(warmupResult.statusCode, warmupResult.timeTotal, warmupResult.stderr, {
+			expectNoContent
+		});
 
 		const samples: number[] = [];
 
@@ -68,10 +86,20 @@ export async function measureProxyLatency(configUrl: string, targetUrl = default
 			});
 
 			if (result.exitCode !== 0) {
-				throw new Error(curlError(result.stderr, session.getStderr(), 'درخواست تست تاخیر از داخل پراکسی انجام نشد.'));
+				throw new Error(
+					curlError(
+						result.stderr,
+						session.getStderr(),
+						'درخواست تست تاخیر از داخل پراکسی انجام نشد.'
+					)
+				);
 			}
 
-			samples.push(parseCurlResult(result.statusCode, result.timeTotal, result.stderr));
+			samples.push(
+				parseCurlResult(result.statusCode, result.timeTotal, result.stderr, {
+					expectNoContent
+				})
+			);
 		}
 
 		const latencyMs = calculateDisplayedLatency(samples);
@@ -105,14 +133,20 @@ export async function measureProxyDownloadSpeed(configUrl: string, targetUrl: st
 		});
 
 		if (result.exitCode !== 0) {
-			throw new Error(curlError(result.stderr, session.getStderr(), 'درخواست تست سرعت از داخل پراکسی انجام نشد.'));
+			throw new Error(
+				curlError(result.stderr, session.getStderr(), 'درخواست تست سرعت از داخل پراکسی انجام نشد.')
+			);
 		}
 
 		assertSuccessfulHttp(result.statusCode, result.stderr);
 		const durationSeconds = Number(result.timeTotal);
 		const downloadedBytes = Number(result.sizeDownload);
 
-		if (!Number.isFinite(durationSeconds) || durationSeconds <= 0 || !Number.isFinite(downloadedBytes)) {
+		if (
+			!Number.isFinite(durationSeconds) ||
+			durationSeconds <= 0 ||
+			!Number.isFinite(downloadedBytes)
+		) {
 			throw new Error('نتیجه تست سرعت معتبر نیست.');
 		}
 

@@ -2737,7 +2737,7 @@ export async function hardDeleteResellerAccount(id: number) {
 	await run('DELETE FROM reseller_config_templates WHERE reseller_id = ?', [id]);
 	await run('DELETE FROM reseller_credit_package_access WHERE reseller_id = ?', [id]);
 	await run('DELETE FROM reseller_credit_requests WHERE reseller_id = ?', [id]);
-	const ticketIds = await queryAll<{ id: number }>(
+	const ticketIds = await queryAll<Row & { id: number }>(
 		'SELECT id FROM reseller_tickets WHERE reseller_id = ?',
 		[id]
 	);

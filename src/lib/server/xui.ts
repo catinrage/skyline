@@ -66,6 +66,7 @@ interface InboundStreamSettings {
 		path?: string;
 		host?: string;
 		mode?: string;
+		extra?: unknown;
 		headers?: {
 			Host?: string;
 			host?: string;
@@ -81,6 +82,7 @@ interface InboundStreamSettings {
 	};
 	tlsSettings?: {
 		serverName?: string;
+		fingerprint?: string;
 		alpn?: string[];
 	};
 }
@@ -387,6 +389,15 @@ function buildVlessConfig(
 		if (streamSettings?.xhttpSettings?.mode) {
 			params.set('mode', streamSettings.xhttpSettings.mode);
 		}
+
+		if (streamSettings?.xhttpSettings?.extra !== undefined) {
+			params.set(
+				'extra',
+				typeof streamSettings.xhttpSettings.extra === 'string'
+					? streamSettings.xhttpSettings.extra
+					: JSON.stringify(streamSettings.xhttpSettings.extra)
+			);
+		}
 	}
 
 	const tcpHeaderType = streamSettings?.tcpSettings?.header?.type;
@@ -397,6 +408,10 @@ function buildVlessConfig(
 	if (security === 'tls') {
 		if (streamSettings?.tlsSettings?.serverName) {
 			params.set('sni', streamSettings.tlsSettings.serverName);
+		}
+
+		if (streamSettings?.tlsSettings?.fingerprint) {
+			params.set('fp', streamSettings.tlsSettings.fingerprint);
 		}
 
 		if (streamSettings?.tlsSettings?.alpn?.[0]) {

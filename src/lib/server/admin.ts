@@ -75,8 +75,8 @@ export type RuntimeSettings = {
 
 const defaultFeatureSettings: FeatureSettings = {
 	configIssueReportCooldownMinutes: 1,
-	latencyTestTargetUrl: 'https://cloudflare.com/cdn-cgi/trace',
-	speedTestTargetUrl: 'https://speed.cloudflare.com/__down?bytes=25000000'
+	latencyTestTargetUrl: 'https://www.gstatic.com/generate_204',
+	speedTestTargetUrl: 'http://ipv4.download.thinkbroadband.com/20MB.zip'
 };
 
 const defaultRuntimeSettings: RuntimeSettings = {
@@ -655,18 +655,51 @@ export async function getFeatureFlags() {
 	}));
 }
 
+function normalizeProbeTargetUrl(
+	value: unknown,
+	fallback: string,
+	options?: { rejectGoogle?: boolean }
+) {
+	const targetUrl = String(value ?? '').trim();
+	if (!targetUrl) return fallback;
+
+	try {
+		const parsed = new URL(targetUrl);
+		const hostname = parsed.hostname.toLowerCase();
+
+		if (!['http:', 'https:'].includes(parsed.protocol)) {
+			return fallback;
+		}
+
+		if (options?.rejectGoogle && (hostname === 'google.com' || hostname === 'www.google.com')) {
+			return fallback;
+		}
+
+		return targetUrl;
+	} catch {
+		return fallback;
+	}
+}
+
 function normalizeFeatureSettings(settings: Partial<FeatureSettings>): FeatureSettings {
 	const cooldown = Number(settings.configIssueReportCooldownMinutes);
-	const latencyTestTargetUrl = String(settings.latencyTestTargetUrl ?? '').trim();
-	const speedTestTargetUrl = String(settings.speedTestTargetUrl ?? '').trim();
+	const latencyTestTargetUrl = normalizeProbeTargetUrl(
+		settings.latencyTestTargetUrl,
+		defaultFeatureSettings.latencyTestTargetUrl,
+		{ rejectGoogle: true }
+	);
+	const speedTestTargetUrl = normalizeProbeTargetUrl(
+		settings.speedTestTargetUrl,
+		defaultFeatureSettings.speedTestTargetUrl
+	);
 
 	return {
 		configIssueReportCooldownMinutes:
 			Number.isInteger(cooldown) && cooldown >= 1 && cooldown <= 1440
 				? cooldown
 				: defaultFeatureSettings.configIssueReportCooldownMinutes,
-		latencyTestTargetUrl: latencyTestTargetUrl || defaultFeatureSettings.latencyTestTargetUrl,
-		speedTestTargetUrl: speedTestTargetUrl || defaultFeatureSettings.speedTestTargetUrl
+		latencyTestTargetUrl,
+		speedTestTargetUrl
 	};
 }
 
