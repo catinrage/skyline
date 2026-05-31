@@ -273,12 +273,13 @@
 		width: 32px;
 		height: 18px;
 		flex: 0 0 auto;
-		border: 0;
+		border: 1px solid var(--va-border);
 		border-radius: 999px;
-		background: var(--va-border);
+		background: var(--va-bg-raised);
 		cursor: pointer;
 		transition:
 			background-color 0.2s ease,
+			border-color 0.2s ease,
 			transform 0.2s ease;
 	}
 
@@ -287,6 +288,7 @@
 	}
 
 	.feature-switch.is-on {
+		border-color: var(--va-accent);
 		background: var(--va-accent);
 	}
 
@@ -297,7 +299,8 @@
 		width: 14px;
 		height: 14px;
 		border-radius: 999px;
-		background: var(--va-text);
+		background: var(--va-bg-panel);
+		box-shadow: 0 1px 3px rgb(0 0 0 / 0.22);
 		transition: inset-inline-end 0.2s ease;
 	}
 

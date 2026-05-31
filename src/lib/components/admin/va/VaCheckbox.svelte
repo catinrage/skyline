@@ -114,7 +114,8 @@
 		width: 32px;
 		height: 18px;
 		border-radius: 999px;
-		background: var(--va-border);
+		border-color: var(--va-border);
+		background: var(--va-bg-raised);
 	}
 
 	.switch i {
@@ -124,7 +125,8 @@
 		width: 12px;
 		height: 12px;
 		border-radius: 999px;
-		background: var(--va-text);
+		background: var(--va-bg-panel);
+		box-shadow: 0 1px 3px rgb(0 0 0 / 0.22);
 		transition: inset-inline-end 0.16s ease;
 	}
 
