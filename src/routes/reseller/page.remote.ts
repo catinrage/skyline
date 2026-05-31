@@ -21,6 +21,7 @@ import {
 	destroyResellerSession,
 	getAuthenticatedReseller,
 	getResellerDashboardState,
+	addQuotaToResellerRequest,
 	rechargeResellerRequest,
 	resetSubResellerPassword,
 	reviewSubResellerCreditRequest,
@@ -518,6 +519,43 @@ export const rechargeConfigCommand = command(
 		} catch (error) {
 			return {
 				rechargeError: error instanceof Error ? error.message : 'شارژ مجدد انجام نشد.'
+			};
+		}
+	}
+);
+
+export const addQuotaCommand = command(
+	z.object({
+		id: z.number().int().positive(),
+		addGb: z.number().positive()
+	}),
+	async ({ id, addGb }) => {
+		const reseller = await requireReseller();
+		const { url } = getRequestEvent();
+
+		if (!reseller) {
+			return {
+				addQuotaError: 'نشست شما منقضی شده است. دوباره وارد شوید.'
+			};
+		}
+
+		try {
+			checkActionRateLimit('recharge', reseller.id);
+			const request = await addQuotaToResellerRequest(
+				reseller.id,
+				id,
+				addGb,
+				url.origin,
+				url.hostname
+			);
+			await getResellerState().set(await buildState());
+
+			return {
+				addQuotaSuccess: `${addGb.toLocaleString('fa-IR-u-nu-latn')} گیگ به کانفیگ اضافه شد.`
+			};
+		} catch (error) {
+			return {
+				addQuotaError: error instanceof Error ? error.message : 'افزایش حجم انجام نشد.'
 			};
 		}
 	}

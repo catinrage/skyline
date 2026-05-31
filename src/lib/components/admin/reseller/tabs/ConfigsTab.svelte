@@ -16,6 +16,7 @@
 	import VaStatRow from '$lib/components/admin/va/VaStatRow.svelte';
 	import VaStatusDot from '$lib/components/admin/va/VaStatusDot.svelte';
 	import {
+		addQuotaCommand,
 		rechargeConfigCommand,
 		revokeConfigCommand,
 		toggleConfigEnabledCommand
@@ -99,6 +100,8 @@
 
 	let rechargeOpen = $state<number | null>(null);
 	let revokeOpen = $state<number | null>(null);
+	let addQuotaOpen = $state<number | null>(null);
+	let addQuotaGb = $state(1);
 	let openMenuId = $state<number | null>(null);
 	let contextMenuStyle = $state('');
 	let filterSelectOpen = $state(false);
@@ -362,6 +365,22 @@
 		}
 	}
 
+	async function handleAddQuota() {
+		if (addQuotaOpen === null) return;
+		try {
+			const result = (await addQuotaCommand({ id: addQuotaOpen, addGb: addQuotaGb }).updates(resellerState)) as
+				| Record<string, unknown>
+				| null;
+			if (result?.addQuotaSuccess) {
+				toast.success(result.addQuotaSuccess as string);
+				addQuotaOpen = null;
+			}
+			if (result?.addQuotaError) toast.error(result.addQuotaError as string);
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : 'افزایش حجم انجام نشد.');
+		}
+	}
+
 	async function handleRevoke() {
 		if (revokeOpen === null) return;
 		try {
@@ -430,6 +449,9 @@
 	);
 	const revokeRequest = $derived(
 		revokeOpen !== null ? data.requests.find((r) => r.id === revokeOpen) ?? null : null
+	);
+	const addQuotaRequest = $derived(
+		addQuotaOpen !== null ? data.requests.find((r) => r.id === addQuotaOpen) ?? null : null
 	);
 </script>
 
@@ -920,6 +942,33 @@
 				</div>
 
 				<div>
+					<div class="va-section-label">افزایش حجم</div>
+					<div class="add-quota-row">
+						<div class="va-field-shell add-quota-field">
+							<input
+								type="number"
+								class="add-quota-input"
+								min="0.01"
+								step="0.5"
+								bind:value={addQuotaGb}
+								dir="ltr"
+							/>
+							<span class="va-field-suffix">GB</span>
+						</div>
+						<button
+							type="button"
+							class="admin-btn admin-btn-primary"
+							disabled={!data.salesEnabled || selectedRequest.revokedAt !== null || selectedRequest.status === 'missing' || addQuotaGb <= 0}
+							onclick={() => (addQuotaOpen = selectedRequest.id)}
+						>
+							<span class="mdi mdi-plus"></span>
+							<span>اضافه کن</span>
+						</button>
+					</div>
+					<div class="field-hint">بدون صفر شدن مصرف، حجم به کانفیگ اضافه می‌شود.</div>
+				</div>
+
+				<div>
 					<div class="va-section-label">اقدامات سریع</div>
 					<div class="va-actions-list">
 						{#if selectedRequest.configUrl}
@@ -1089,6 +1138,32 @@
 					<div class="internal-note-box">{selectedRequest.internalNote}</div>
 				</div>
 			{/if}
+			<div>
+				<div class="va-section-label">افزایش حجم</div>
+				<div class="add-quota-row">
+					<div class="va-field-shell add-quota-field">
+						<input
+							type="number"
+							class="add-quota-input"
+							min="0.01"
+							step="0.5"
+							bind:value={addQuotaGb}
+							dir="ltr"
+						/>
+						<span class="va-field-suffix">GB</span>
+					</div>
+					<button
+						type="button"
+						class="admin-btn admin-btn-primary"
+						disabled={!data.salesEnabled || selectedRequest.revokedAt !== null || selectedRequest.status === 'missing' || addQuotaGb <= 0}
+						onclick={() => (addQuotaOpen = selectedRequest.id)}
+					>
+						<span class="mdi mdi-plus"></span>
+						<span>اضافه کن</span>
+					</button>
+				</div>
+				<div class="field-hint">بدون صفر شدن مصرف، حجم به کانفیگ اضافه می‌شود.</div>
+			</div>
 			<div class="va-actions-list">
 				{#if selectedRequest.configUrl}
 					<button type="button" class="va-action-row" onclick={() => selectedRequest?.configUrl && copyConfig(selectedRequest.configUrl)}>
@@ -1175,6 +1250,32 @@
 		>
 			<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
 			<span>{revokeConfigCommand.pending > 0 ? 'در حال حذف...' : 'بله، حذف کن'}</span>
+		</button>
+	{/snippet}
+</Modal>
+
+<!-- Add quota confirmation -->
+<Modal open={addQuotaOpen !== null} title="افزایش حجم کانفیگ" eyebrow="تایید عملیات" onClose={() => (addQuotaOpen = null)}>
+	{#if addQuotaRequest}
+		<p>
+			با تایید، <strong>{addQuotaGb.toLocaleString('fa-IR-u-nu-latn')} گیگ</strong> به حجم کانفیگ <strong>{addQuotaRequest.customerLabel || addQuotaRequest.xuiEmail}</strong> اضافه می‌شود. مصرف فعلی صفر نمی‌شود.
+		</p>
+		<div class="modal-summary">
+			<div>افزایش: <strong>{addQuotaGb.toLocaleString('fa-IR-u-nu-latn')} گیگ</strong></div>
+			<div>مصرف اعتبار: <strong>{addQuotaGb.toLocaleString('fa-IR-u-nu-latn')} گیگ</strong></div>
+		</div>
+	{/if}
+
+	{#snippet footer()}
+		<button type="button" class="admin-btn admin-btn-ghost" onclick={() => (addQuotaOpen = null)}>انصراف</button>
+		<button
+			type="button"
+			class="admin-btn admin-btn-success"
+			disabled={addQuotaGb <= 0 || addQuotaCommand.pending > 0}
+			onclick={handleAddQuota}
+		>
+			<span class="mdi mdi-plus"></span>
+			<span>{addQuotaCommand.pending > 0 ? 'در حال افزایش...' : `بله، ${addQuotaGb} گیگ اضافه کن`}</span>
 		</button>
 	{/snippet}
 </Modal>
@@ -1648,6 +1749,33 @@
 		color: var(--va-danger);
 		font-size: 0.82rem;
 		line-height: 1.7;
+	}
+
+	.add-quota-row {
+		display: flex;
+		gap: 8px;
+		align-items: center;
+	}
+
+	.add-quota-field {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.add-quota-input {
+		flex: 1;
+		min-width: 0;
+		border: 0;
+		background: transparent;
+		color: var(--va-text);
+		font: 500 13px var(--va-font-mono);
+		outline: none;
+		-moz-appearance: textfield;
+	}
+
+	.add-quota-input::-webkit-outer-spin-button,
+	.add-quota-input::-webkit-inner-spin-button {
+		-webkit-appearance: none;
 	}
 
 	.mobile-details-stack {

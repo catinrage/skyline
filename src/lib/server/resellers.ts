@@ -1578,7 +1578,7 @@ async function insertGbLedger(input: {
 	amountGb: number;
 	createdAt?: number;
 }) {
-	if (!Number.isInteger(input.amountGb) || input.amountGb === 0) {
+	if (!isFinite(input.amountGb) || input.amountGb === 0) {
 		throw new Error('مقدار گیگابایت دفتر اعتبار نامعتبر است.');
 	}
 
@@ -2052,7 +2052,7 @@ export async function createResellerCreditPackage(input: {
 }) {
 	await ensureResellerTables();
 
-	if (!Number.isInteger(input.quotaGb) || input.quotaGb <= 0) {
+	if (!isFinite(input.quotaGb) || input.quotaGb <= 0) {
 		throw new Error('حجم بسته باید بیشتر از صفر باشد.');
 	}
 
@@ -2076,7 +2076,7 @@ export async function updateResellerCreditPackage(
 ) {
 	await ensureResellerTables();
 
-	if (!Number.isInteger(input.quotaGb) || input.quotaGb <= 0) {
+	if (!isFinite(input.quotaGb) || input.quotaGb <= 0) {
 		throw new Error('حجم بسته باید بیشتر از صفر باشد.');
 	}
 
@@ -4182,6 +4182,160 @@ export async function rechargeResellerRequest(
 
 			throw new Error(
 				'شارژ در x-ui انجام شد اما ثبت مالی ناموفق بود. کانفیگ برای جلوگیری از سرویس رایگان غیرفعال شد؛ با مدیر تماس بگیرید.'
+			);
+		}
+
+		const updatedCharges = await getResellerChargesByResellerId(resellerId);
+		return buildRequestView(
+			request,
+			origin,
+			liveAfter,
+			account.username,
+			updatedCharges,
+			await getResellerPlans()
+		);
+	} finally {
+		rechargeLocks.delete(requestId);
+	}
+}
+
+export async function addQuotaToResellerRequest(
+	resellerId: number,
+	requestId: number,
+	addGb: number,
+	origin: string,
+	fallbackHost?: string
+) {
+	await ensureResellerTables();
+
+	if (!isFinite(addGb) || addGb <= 0) {
+		throw new Error('مقدار افزایش حجم نامعتبر است.');
+	}
+
+	if (rechargeLocks.has(requestId)) {
+		throw new Error('عملیات روی این کانفیگ در حال انجام است. چند لحظه دیگر دوباره بررسی کنید.');
+	}
+
+	rechargeLocks.add(requestId);
+
+	try {
+		const account = await getResellerAccountById(resellerId);
+
+		if (!account || account.is_active !== 1) {
+			throw new Error('حساب فروشنده فعال نیست.');
+		}
+
+		if (account.must_change_password === 1) {
+			throw new Error('قبل از فروش، گذرواژه موقت حساب را تغییر دهید.');
+		}
+
+		if (!(await isFeatureEnabled('reseller_sales'))) {
+			throw new Error('فروش توسط مدیر متوقف شده است.');
+		}
+
+		const request = await getRequestById(requestId);
+
+		if (!request || request.resellerId !== resellerId) {
+			throw new Error('درخواست موردنظر پیدا نشد.');
+		}
+
+		if (request.revokedAt) {
+			throw new Error('کانفیگ لغوشده قابل افزایش حجم نیست.');
+		}
+
+		if (!isInboundAllowedForAccount(account, request.xuiInboundId)) {
+			throw new Error('دسترسی شما به سرور این کانفیگ توسط مدیر محدود شده است.');
+		}
+
+		const charges = await getResellerChargesByResellerId(resellerId);
+		const gbBalance = buildResellerStats(
+			await getResellerRequestsByResellerId(resellerId),
+			await getResellerPaymentsByResellerId(resellerId),
+			account.debt_cap_toman ?? null,
+			charges,
+			await getResellerGbLedgerByResellerId(resellerId)
+		).gbBalance;
+
+		if (gbBalance < addGb) {
+			throw new Error('اعتبار گیگابایت شما برای افزایش حجم کافی نیست.');
+		}
+
+		const liveMap = await getVpnClientUsageMap(fallbackHost, { includeOnlineStatus: true });
+		const liveUsage = liveMap.get(request.xuiClientUuid);
+
+		if (!liveUsage) {
+			throw new Error('کانفیگ در x-ui پیدا نشد و قابل افزایش حجم نیست.');
+		}
+
+		if (liveUsage.status === 'disabled') {
+			throw new Error('کانفیگ غیرفعال قابل افزایش حجم نیست.');
+		}
+
+		const currentTotalBytes = liveUsage.totalBytes ?? 0;
+		const addBytes = Math.round(addGb * 1024 ** 3);
+		const newTotalBytes = currentTotalBytes + addBytes;
+
+		const currentExpiryTime = liveUsage.expiresAt
+			? new Date(liveUsage.expiresAt).getTime()
+			: Date.now() + 30 * 24 * 60 * 60 * 1000;
+
+		await updateVpnClient({
+			inboundId: request.xuiInboundId,
+			uuid: request.xuiClientUuid,
+			totalBytes: newTotalBytes,
+			expiryTime: currentExpiryTime,
+			enable: true
+		});
+
+		const liveAfter = await getVpnClientUsageMap(fallbackHost, { includeOnlineStatus: true });
+
+		if (!liveAfter.get(request.xuiClientUuid)) {
+			throw new Error('افزایش حجم در x-ui انجام شد اما بازیابی کانفیگ ناموفق بود. با مدیر تماس بگیرید.');
+		}
+
+		try {
+			await insertResellerCharge({
+				resellerId,
+				requestId,
+				type: 'recharge',
+				amountToman: 0
+			});
+			await insertGbLedger({
+				resellerId,
+				requestId,
+				type: 'recharge',
+				amountGb: -addGb
+			});
+		} catch (billingError) {
+			resellerLogger.error(
+				'Add-quota succeeded in x-ui but local billing failed. Disabling client to prevent unpaid service.',
+				{
+					resellerId,
+					requestId,
+					uuid: request.xuiClientUuid,
+					error: billingError instanceof Error ? billingError : undefined
+				}
+			);
+
+			try {
+				await updateVpnClient({
+					inboundId: request.xuiInboundId,
+					uuid: request.xuiClientUuid,
+					totalBytes: currentTotalBytes,
+					expiryTime: currentExpiryTime,
+					enable: false
+				});
+			} catch (disableError) {
+				resellerLogger.error('Failed to revert x-ui client after add-quota billing failure.', {
+					resellerId,
+					requestId,
+					uuid: request.xuiClientUuid,
+					error: disableError instanceof Error ? disableError : undefined
+				});
+			}
+
+			throw new Error(
+				'افزایش حجم در x-ui انجام شد اما ثبت مالی ناموفق بود. کانفیگ غیرفعال شد؛ با مدیر تماس بگیرید.'
 			);
 		}
 

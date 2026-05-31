@@ -6,12 +6,11 @@
 	import { toast } from 'svelte-sonner';
 	import AdminShell from '$lib/components/admin/AdminShell.svelte';
 	import LoadingState from '$lib/components/admin/LoadingState.svelte';
-	import LoginScreen from '$lib/components/admin/LoginScreen.svelte';
 	import AnimatedIcon from '$lib/components/admin/AnimatedIcon.svelte';
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import { buildManageNav, manageTabMeta } from '$lib/components/admin/manage/nav-config';
-	import { getManageState, login, logout } from './page.remote';
+	import { getManageState, logout } from './page.remote';
 
 	let { children } = $props();
 
@@ -59,6 +58,16 @@
 	function handleLogout() {
 		logoutForm?.requestSubmit();
 	}
+
+	$effect(() => {
+		if (!manageState.loading && manageState.current && !manageState.current.authenticated) {
+			const current = page.url.pathname + (page.url.search || '');
+			const isLoginPage = current.endsWith('/login') || current.includes('/login?');
+			if (!isLoginPage) {
+				void goto(`${basePath}/login?redirect=${encodeURIComponent(current)}`, { replaceState: true });
+			}
+		}
+	});
 
 	$effect(() => {
 		if (!manageState.current?.authenticated) return;
@@ -112,54 +121,9 @@
 		<LoadingState label="در حال بارگذاری پنل مدیریت..." />
 	</div>
 {:else if !manageState.current?.authenticated}
-	<LoginScreen
-		eyebrow="Skyline"
-		title="ورود به Skyline"
-		description="با نام کاربری و گذرواژه خود وارد شوید. مسیر فعلی تعیین می‌کند وارد پنل مدیریت یا فروشندگی شوید."
-	>
-		<form
-			{...login.enhance(async ({ submit }) => {
-				await submit();
-				const result = login.result;
-				if (result?.loginSuccess) toast.success(result.loginSuccess);
-				if (result?.loginError) toast.error(result.loginError);
-			})}
-			class="login-form-inner"
-		>
-			<div class="form-field">
-				<label for="admin-username">نام کاربری</label>
-				<input
-					id="admin-username"
-					{...login.fields.username.as('text')}
-					autocomplete="username"
-					class="admin-field"
-					placeholder="نام کاربری"
-				/>
-				{#each login.fields.username.issues() as issue, index (index)}
-					<p class="form-error">{issue.message}</p>
-				{/each}
-			</div>
-
-			<div class="form-field">
-				<label for="passkey">گذرواژه</label>
-				<input
-					id="passkey"
-					{...login.fields.passkey.as('password')}
-					autocomplete="current-password"
-					class="admin-field"
-					placeholder="گذرواژه را وارد کنید"
-				/>
-				{#each login.fields.passkey.issues() as issue, index (index)}
-					<p class="form-error">{issue.message}</p>
-				{/each}
-			</div>
-
-			<button type="submit" class="admin-btn admin-btn-primary login-submit">
-				<AnimatedIcon name="chevron-left" size={16} />
-				<span>ورود به Skyline</span>
-			</button>
-		</form>
-	</LoginScreen>
+	<div class="admin-shell" dir="rtl">
+		<LoadingState label="در حال هدایت به صفحه ورود..." />
+	</div>
 {:else}
 	<AdminShell
 		panelTitle={meta.title}

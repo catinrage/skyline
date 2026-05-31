@@ -6,12 +6,11 @@
 	import { toast } from 'svelte-sonner';
 	import AdminShell from '$lib/components/admin/AdminShell.svelte';
 	import LoadingState from '$lib/components/admin/LoadingState.svelte';
-	import LoginScreen from '$lib/components/admin/LoginScreen.svelte';
 	import AnimatedIcon from '$lib/components/admin/AnimatedIcon.svelte';
 	import { buildResellerNav, resellerTabMeta } from '$lib/components/admin/reseller/nav-config';
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
-	import { changePasswordCommand, getResellerState, login, logoutCommand } from './page.remote';
+	import { changePasswordCommand, getResellerState, logoutCommand } from './page.remote';
 
 	let { children } = $props();
 
@@ -103,6 +102,19 @@
 	}
 
 	$effect(() => {
+		if (!panelState && !resellerState.loading) {
+			return;
+		}
+		if (!resellerState.loading && panelState && !panelState.authenticated) {
+			const current = page.url.pathname + (page.url.search || '');
+			const isLoginPage = current.endsWith('/login') || current.includes('/login?');
+			if (!isLoginPage) {
+				void goto(`${basePath}/login?redirect=${encodeURIComponent(current)}`, { replaceState: true });
+			}
+		}
+	});
+
+	$effect(() => {
 		if (
 			panelState?.authenticated &&
 			currentTab === 'overview' &&
@@ -138,52 +150,9 @@
 		<LoadingState label="در حال بارگذاری پنل فروشنده..." />
 	</div>
 {:else if !panelState?.authenticated}
-	<LoginScreen
-		eyebrow="Skyline"
-		title="ورود به Skyline"
-		description="با نام کاربری و گذرواژه خود وارد شوید. مسیر فعلی تعیین می‌کند وارد پنل مدیریت یا فروشندگی شوید."
-	>
-		<form
-			{...login.enhance(async ({ submit }) => {
-				await submit();
-				const result = login.result;
-				if (result?.loginSuccess) toast.success(result.loginSuccess);
-				if (result?.loginError) toast.error(result.loginError);
-			})}
-			class="login-form-inner"
-		>
-			<div class="form-field">
-				<label for="reseller-username">نام کاربری</label>
-				<input
-					id="reseller-username"
-					{...login.fields.username.as('text')}
-					autocomplete="username"
-					class="admin-field"
-					placeholder="نام کاربری"
-				/>
-			</div>
-
-			<div class="form-field">
-				<label for="reseller-password">گذرواژه</label>
-				<input
-					id="reseller-password"
-					{...login.fields.password.as('password')}
-					autocomplete="current-password"
-					class="admin-field"
-					placeholder="گذرواژه"
-				/>
-			</div>
-
-			<button type="submit" class="admin-btn admin-btn-primary login-submit">
-				<AnimatedIcon name="chevron-left" size={16} />
-				<span>ورود به Skyline</span>
-			</button>
-
-			<div class="forgot-password-link">
-				<a href="{basePath}/forgot-password" class="forgot-link">رمز عبور را فراموش کرده‌اید؟</a>
-			</div>
-		</form>
-	</LoginScreen>
+	<div class="admin-shell" dir="rtl">
+		<LoadingState label="در حال هدایت به صفحه ورود..." />
+	</div>
 {:else}
 	<AdminShell
 		panelTitle={meta.title}
@@ -299,19 +268,4 @@
 		font-weight: 650;
 	}
 
-	.forgot-password-link {
-		text-align: center;
-		margin-top: 8px;
-	}
-
-	.forgot-link {
-		font-size: 12px;
-		color: var(--va-text-muted);
-		text-decoration: none;
-		transition: color 0.15s;
-	}
-
-	.forgot-link:hover {
-		color: var(--va-accent);
-	}
 </style>
