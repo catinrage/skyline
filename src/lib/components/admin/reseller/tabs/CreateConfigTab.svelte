@@ -427,7 +427,7 @@
 		display: flex;
 		gap: 10px;
 		overflow-x: auto;
-		padding-bottom: 8px;
+		padding: 2px 1px 8px;
 		margin-bottom: 12px;
 		scrollbar-width: thin;
 	}
