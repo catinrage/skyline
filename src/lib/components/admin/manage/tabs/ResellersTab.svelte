@@ -1002,7 +1002,9 @@
 					<p class="va-inspector-sub">ID #{selected.id} · {formatDate(selected.createdAt)}</p>
 				</div>
 			</div>
-			{@render resellerInspectorBody()}
+			{#if !mobileDetailsOpen}
+				{@render resellerInspectorBody()}
+			{/if}
 		{:else}
 			<div class="va-inspector-body">
 				<EmptyState
@@ -1859,6 +1861,8 @@
 	.hd-username-verify label {
 		font-size: 12px;
 		color: var(--va-text-muted);
+		text-align: right;
+		font-family: var(--va-font-fa);
 	}
 
 	.hd-confirm-field {

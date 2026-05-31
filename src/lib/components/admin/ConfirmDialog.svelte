@@ -66,6 +66,7 @@
 			aria-labelledby="cd-title"
 			aria-describedby={description ? 'cd-desc' : undefined}
 			tabindex="-1"
+			dir="rtl"
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={(e) => e.stopPropagation()}
 		>
@@ -104,7 +105,7 @@
 					class="cd-btn cd-cancel"
 					bind:this={cancelBtnEl}
 					onclick={onClose}
-					disabled={loading || confirmDisabled}
+					disabled={loading}
 				>
 					{cancelLabel}
 				</button>
@@ -112,7 +113,7 @@
 					type="button"
 					class="cd-btn cd-confirm"
 					onclick={onConfirm}
-					disabled={loading}
+					disabled={loading || confirmDisabled}
 				>
 					{#if loading}
 						<span class="cd-spinner" aria-hidden="true"></span>
@@ -194,7 +195,7 @@
 	/* ── Text ──────────────────────────────────────────────── */
 	.cd-title {
 		margin: 0 0 8px;
-		font: 600 15px var(--va-font-mono);
+		font: 600 15px var(--va-font-fa);
 		color: var(--va-text);
 		text-align: center;
 		line-height: 1.4;
@@ -203,6 +204,7 @@
 	.cd-desc {
 		margin: 0 0 20px;
 		font-size: 13px;
+		font-family: var(--va-font-fa);
 		color: var(--va-text-faint);
 		text-align: center;
 		line-height: 1.65;
@@ -224,7 +226,7 @@
 		flex: 1;
 		padding: 9px 14px;
 		border-radius: 8px;
-		font: 500 13px var(--va-font-mono);
+		font: 500 13px var(--va-font-fa);
 		cursor: pointer;
 		transition:
 			background 0.15s ease,

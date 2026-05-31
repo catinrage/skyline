@@ -147,6 +147,7 @@
 		font-size: 15px;
 		font-weight: 600;
 		letter-spacing: -0.01em;
+		font-family: var(--va-font-fa);
 	}
 
 	.modal-close {
