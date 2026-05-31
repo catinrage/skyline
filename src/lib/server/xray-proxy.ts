@@ -53,6 +53,12 @@ export type XrayBinaryHealthResult = {
 	errorName: string | null;
 };
 
+export type ProxyDownloadSampleProgress = {
+	downloadedBytes: number;
+	durationSeconds: number;
+	downloadMbps: number;
+};
+
 async function getXrayBinaryPath(settings?: RuntimeSettings) {
 	const runtimeSettings = settings ?? (await getRuntimeSettings());
 	return runtimeSettings.xrayBinaryPath.trim();
@@ -317,6 +323,153 @@ async function readStreamText(stream: Readable | null | undefined) {
 	return Buffer.concat(chunks).toString('utf8');
 }
 
+function calculateDownloadMbps(downloadedBytes: number, durationSeconds: number) {
+	if (durationSeconds <= 0) return 0;
+	return Number(((downloadedBytes * 8) / durationSeconds / 1_000_000).toFixed(2));
+}
+
+function curlError(curlStderr: string, xrayStderr: string, fallback: string) {
+	const parts: string[] = [];
+	if (curlStderr.trim()) parts.push(curlStderr.trim());
+	if (xrayStderr.trim()) parts.push(`xray: ${xrayStderr.trim()}`);
+	return parts.join(' | ') || fallback;
+}
+
+export async function runProxyCurlDownloadSample(
+	socksPort: number,
+	url: string,
+	options: {
+		sampleSeconds: number;
+		connectTimeoutSeconds?: number;
+		maxTimeSeconds?: number;
+		xrayStderr?: () => string;
+		signal?: AbortSignal;
+		onProgress?: (progress: ProxyDownloadSampleProgress) => void;
+	}
+) {
+	const sampleMs = Math.max(1, options.sampleSeconds) * 1000;
+	const curlArgs = [
+		'curl',
+		'--silent',
+		'--show-error',
+		'--fail',
+		'--location',
+		'--proxy',
+		`socks5h://127.0.0.1:${socksPort}`,
+		'--connect-timeout',
+		String(options.connectTimeoutSeconds ?? 8),
+		'--max-time',
+		String(options.maxTimeSeconds ?? options.sampleSeconds + 8),
+		'--output',
+		'-',
+		url
+	];
+	let downloadedBytes = 0;
+	let firstByteAt: number | null = null;
+	let lastProgressAt = 0;
+	let sampleCompleted = false;
+	let abortRequested = false;
+	const stderrChunks: Buffer[] = [];
+	let sampleTimer: NodeJS.Timeout | null = null;
+
+	proxyLogger.debug('Running proxy curl sampled download.', {
+		socksPort,
+		url,
+		sampleSeconds: options.sampleSeconds,
+		connectTimeoutSeconds: options.connectTimeoutSeconds ?? 8,
+		maxTimeSeconds: options.maxTimeSeconds ?? options.sampleSeconds + 8
+	});
+
+	const curlProcess = spawnProcess(curlArgs, {
+		stdout: 'pipe',
+		stderr: 'pipe'
+	});
+
+	const emitProgress = () => {
+		if (firstByteAt === null) return;
+		const durationSeconds = Math.max((Date.now() - firstByteAt) / 1000, 0.001);
+		options.onProgress?.({
+			downloadedBytes,
+			durationSeconds,
+			downloadMbps: calculateDownloadMbps(downloadedBytes, durationSeconds)
+		});
+	};
+
+	const stopCurl = (signal: NodeJS.Signals = 'SIGTERM') => {
+		if (curlProcess.exitCode !== null) return;
+		curlProcess.kill(signal);
+	};
+
+	const abortHandler = () => {
+		abortRequested = true;
+		stopCurl();
+	};
+
+	options.signal?.addEventListener('abort', abortHandler, { once: true });
+
+	curlProcess.stdout?.on('data', (chunk: Buffer | string) => {
+		if (firstByteAt === null) {
+			firstByteAt = Date.now();
+			sampleTimer = setTimeout(() => {
+				sampleCompleted = true;
+				emitProgress();
+				stopCurl();
+			}, sampleMs);
+		}
+
+		downloadedBytes += Buffer.isBuffer(chunk) ? chunk.length : Buffer.byteLength(chunk);
+
+		const now = Date.now();
+		if (now - lastProgressAt >= 900) {
+			lastProgressAt = now;
+			emitProgress();
+		}
+	});
+
+	curlProcess.stderr?.on('data', (chunk: Buffer | string) => {
+		stderrChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+	});
+
+	const exitCode = await curlProcess.exited;
+	if (sampleTimer) clearTimeout(sampleTimer);
+	options.signal?.removeEventListener('abort', abortHandler);
+	emitProgress();
+
+	const stderr = Buffer.concat(stderrChunks).toString('utf8');
+	const durationSeconds =
+		firstByteAt === null ? 0 : Math.max((Date.now() - firstByteAt) / 1000, 0.001);
+	const result = {
+		exitCode,
+		stderr,
+		downloadedBytes,
+		durationSeconds,
+		downloadMbps: calculateDownloadMbps(downloadedBytes, durationSeconds),
+		sampleCompleted
+	};
+
+	proxyLogger.debug('Proxy curl sampled download finished.', {
+		socksPort,
+		url,
+		...result
+	});
+
+	if (abortRequested) {
+		throw new Error('تست سرعت متوقف شد.');
+	}
+
+	if (downloadedBytes <= 0) {
+		throw new Error(
+			curlError(stderr, options.xrayStderr?.() ?? '', 'هیچ داده‌ای از مقصد تست سرعت دریافت نشد.')
+		);
+	}
+
+	if (exitCode !== 0 && !sampleCompleted) {
+		throw new Error(curlError(stderr, options.xrayStderr?.() ?? '', 'دانلود تست سرعت کامل نشد.'));
+	}
+
+	return result;
+}
+
 export async function runProxyCurlRequest(
 	socksPort: number,
 	url: string,
@@ -371,7 +524,8 @@ export async function runProxyCurlRequest(
 	const exitCode = await curlProcess.exited;
 	const markerIndex = stdout.lastIndexOf('\n__SKYLINE_STATUS__ ');
 	const output = markerIndex >= 0 ? stdout.slice(0, markerIndex) : stdout;
-	const meta = markerIndex >= 0 ? stdout.slice(markerIndex + '\n__SKYLINE_STATUS__ '.length).trim() : '';
+	const meta =
+		markerIndex >= 0 ? stdout.slice(markerIndex + '\n__SKYLINE_STATUS__ '.length).trim() : '';
 	const [statusCode = '', timeTotal = '', sizeDownload = '0'] = meta.split(/\s+/);
 	proxyLogger.debug('Proxy curl request finished.', {
 		socksPort,
@@ -392,7 +546,9 @@ export async function runProxyCurlRequest(
 	};
 }
 
-export async function createTemporaryProxySession(configUrl: string): Promise<TemporaryProxySession> {
+export async function createTemporaryProxySession(
+	configUrl: string
+): Promise<TemporaryProxySession> {
 	const parsed = parseVlessUri(configUrl);
 	const socksPort = getRandomPort();
 	const probeId = crypto.randomUUID();

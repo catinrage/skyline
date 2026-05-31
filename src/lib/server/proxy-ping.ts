@@ -1,4 +1,9 @@
-import { createTemporaryProxySession, runProxyCurlRequest } from '$lib/server/xray-proxy';
+import {
+	createTemporaryProxySession,
+	runProxyCurlDownloadSample,
+	runProxyCurlRequest,
+	type ProxyDownloadSampleProgress
+} from '$lib/server/xray-proxy';
 import { logger } from '$lib/server/logger';
 
 const defaultProbeTargetUrl = 'https://www.gstatic.com/generate_204';
@@ -112,6 +117,53 @@ export async function measureProxyLatency(configUrl: string, targetUrl = default
 		return {
 			latencyMs,
 			samples,
+			target: targetUrl
+		};
+	} finally {
+		if (session) {
+			await session.cleanup();
+		}
+	}
+}
+
+export async function measureProxyDownloadSpeedSample(
+	configUrl: string,
+	targetUrl: string,
+	options: {
+		sampleSeconds?: number;
+		signal?: AbortSignal;
+		onProgress?: (progress: ProxyDownloadSampleProgress) => void;
+	} = {}
+) {
+	let session: Awaited<ReturnType<typeof createTemporaryProxySession>> | null = null;
+	const sampleSeconds = options.sampleSeconds ?? 10;
+	proxyPingLogger.debug('Starting proxy sampled download speed measurement.', {
+		target: targetUrl,
+		sampleSeconds
+	});
+
+	try {
+		session = await createTemporaryProxySession(configUrl);
+		const result = await runProxyCurlDownloadSample(session.socksPort, targetUrl, {
+			sampleSeconds,
+			maxTimeSeconds: sampleSeconds + 12,
+			xrayStderr: session.getStderr,
+			signal: options.signal,
+			onProgress: options.onProgress
+		});
+
+		proxyPingLogger.debug('Proxy sampled download speed measurement completed.', {
+			target: targetUrl,
+			downloadedBytes: result.downloadedBytes,
+			durationSeconds: result.durationSeconds,
+			downloadMbps: result.downloadMbps,
+			sampleCompleted: result.sampleCompleted
+		});
+
+		return {
+			downloadMbps: result.downloadMbps,
+			downloadedBytes: result.downloadedBytes,
+			durationSeconds: result.durationSeconds,
 			target: targetUrl
 		};
 	} finally {

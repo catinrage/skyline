@@ -9,7 +9,7 @@
 	import { applyStoredTheme, readStoredTheme, type ThemeMode } from '$lib/theme';
 	import { formatExpiry, formatRelativeExpiry, formatTraffic } from '$lib/utils/format';
 	import type { ClientStatus } from '$lib/types/vpn';
-	import { createClientTicketCommand, measurePing, measureSpeed, replyClientTicketAsClientCommand, sendConfigIssueReport } from './page.remote';
+	import { createClientTicketCommand, measurePing, replyClientTicketAsClientCommand, sendConfigIssueReport } from './page.remote';
 	import type { UserPanelData } from './user-panel.server';
 
 	type PageData = {
@@ -28,6 +28,9 @@
 	let replyMessage = $state('');
 	let ticketModalOpen = $state(false);
 	let previewImage = $state<{ src: string; alt: string } | null>(null);
+	let speedTesting = $state(false);
+	let liveSpeedMbps = $state<number | null>(null);
+	let streamedSpeedMbps = $state<number | null>(null);
 
 	const statusCopy: Record<
 		ClientStatus,
@@ -50,7 +53,7 @@
 	const ticketAllowed = $derived(panelData.features.configIssueReport && panelData.client.status === 'active');
 	const visibleClientApps = $derived(panelData.clientAppLinks.filter((item) => item.name && item.downloadUrl));
 	const lastPingMs = $derived(typeof measurePing.result?.pingMs === 'number' ? measurePing.result.pingMs : null);
-	const lastSpeedMbps = $derived(typeof measureSpeed.result?.downloadMbps === 'number' ? measureSpeed.result.downloadMbps : null);
+	const lastSpeedMbps = $derived(streamedSpeedMbps);
 
 	async function refreshPanel() {
 		refreshPulse = true;
@@ -99,6 +102,97 @@
 		if (os === 'windows') return 'Windows';
 		if (os === 'linux') return 'Linux';
 		return 'Android';
+	}
+
+	type SpeedStreamEvent =
+		| { type: 'progress'; downloadMbps: number; downloadedBytes: number; durationSeconds: number }
+		| {
+				type: 'complete';
+				downloadMbps: number;
+				downloadedBytes: number;
+				durationSeconds: number;
+				speedSuccess: string;
+			}
+		| { type: 'error'; speedError: string };
+
+	function blendColor(start: [number, number, number], end: [number, number, number], ratio: number) {
+		const boundedRatio = Math.min(1, Math.max(0, ratio));
+		const channel = (index: number) => Math.round(start[index] + (end[index] - start[index]) * boundedRatio);
+		return `rgb(${channel(0)} ${channel(1)} ${channel(2)})`;
+	}
+
+	function getLatencyColor(latencyMs: number) {
+		if (latencyMs <= 400) return 'rgb(45 255 155)';
+		if (latencyMs <= 800) {
+			return blendColor([45, 255, 155], [255, 224, 84], (latencyMs - 400) / 400);
+		}
+		return blendColor([255, 224, 84], [255, 75, 88], (latencyMs - 800) / 400);
+	}
+
+	function handleSpeedEvent(event: SpeedStreamEvent) {
+		if (event.type === 'progress') {
+			liveSpeedMbps = event.downloadMbps;
+		}
+
+		if (event.type === 'complete') {
+			streamedSpeedMbps = event.downloadMbps;
+			toast.success('انجام شد', { description: event.speedSuccess });
+		}
+
+		if (event.type === 'error') {
+			toast.error('خطا', { description: event.speedError });
+		}
+	}
+
+	async function runLiveSpeedTest(uuid: string) {
+		if (speedTesting) return;
+
+		speedTesting = true;
+		liveSpeedMbps = null;
+
+		try {
+			const response = await fetch(`/user/${encodeURIComponent(uuid)}/speed-test`, { method: 'POST' });
+
+			if (!response.ok) {
+				const result = (await response.json().catch(() => ({}))) as { speedError?: string };
+				toast.error('خطا', { description: result.speedError ?? 'تست سرعت انجام نشد.' });
+				return;
+			}
+
+			const reader = response.body?.getReader();
+			if (!reader) {
+				toast.error('خطا', { description: 'پاسخ تست سرعت قابل خواندن نیست.' });
+				return;
+			}
+
+			const decoder = new TextDecoder();
+			let buffer = '';
+
+			while (true) {
+				const { done, value } = await reader.read();
+				buffer += decoder.decode(value, { stream: !done });
+				const lines = buffer.split('\n');
+				buffer = lines.pop() ?? '';
+
+				for (const line of lines) {
+					if (!line.trim()) continue;
+					handleSpeedEvent(JSON.parse(line) as SpeedStreamEvent);
+				}
+
+				if (done) break;
+			}
+
+			if (buffer.trim()) {
+				handleSpeedEvent(JSON.parse(buffer) as SpeedStreamEvent);
+			}
+		} catch (error) {
+			toast.error('خطا', {
+				description: error instanceof Error ? error.message : 'تست سرعت انجام نشد.'
+			});
+		} finally {
+			speedTesting = false;
+			liveSpeedMbps = null;
+		}
 	}
 
 	async function copyConfigUrl(configUrl: string) {
@@ -293,8 +387,13 @@
 						</div>
 						<p class="expiry-note">تاریخ پایان: <span>{getExpirySecondary(state.client)}</span></p>
 						<p class="ping-note">
-							پینگ: {lastPingMs === null ? 'تست نشده' : `${lastPingMs}ms`} ·
-							سرعت: {lastSpeedMbps === null ? 'تست نشده' : `${lastSpeedMbps} Mbps`}
+							پینگ:
+							{#if lastPingMs === null}
+								تست نشده
+							{:else}
+								<span class="latency-value" style={`--latency-color: ${getLatencyColor(lastPingMs)}`}>{lastPingMs}ms</span>
+							{/if}
+							· سرعت: {lastSpeedMbps === null ? 'تست نشده' : `${lastSpeedMbps} Mbps`}
 						</p>
 					</div>
 				</div>
@@ -334,16 +433,16 @@
 								</form>
 							{/if}
 							{#if speedWidgetEnabled}
-								<form
-									{...measureSpeed.enhance(async ({ submit }) => {
-										await submitWithToast(submit, () => measureSpeed.result, 'speedSuccess', 'speedError');
-									})}
+								<button
+									type="button"
+									class="ghost-button"
+									class:speed-active={speedTesting}
+									disabled={!pingAllowed || speedTesting}
+									onclick={() => runLiveSpeedTest(state.client.uuid)}
 								>
-									<button type="submit" class="ghost-button" disabled={!pingAllowed || measureSpeed.pending > 0}>
-										<span class="mdi {measureSpeed.pending > 0 ? 'mdi-loading mdi-spin' : 'mdi-speedometer'}"></span>
-										<span>{measureSpeed.pending > 0 ? 'در حال تست...' : 'تست سرعت'}</span>
-									</button>
-								</form>
+									<span class="mdi {speedTesting ? 'mdi-loading mdi-spin' : 'mdi-speedometer'}"></span>
+									<span>{speedTesting ? (liveSpeedMbps === null ? 'در حال تست...' : `${liveSpeedMbps.toFixed(2)} Mbps`) : 'تست سرعت'}</span>
+								</button>
 							{/if}
 
 							{#if state.features.configIssueReport}
@@ -978,6 +1077,12 @@
 		margin: 8px 0 0;
 	}
 
+	.latency-value {
+		color: var(--latency-color);
+		font-weight: 700;
+		text-shadow: 0 0 14px color-mix(in srgb, var(--latency-color) 42%, transparent);
+	}
+
 	.config-block {
 		display: flex;
 		gap: 24px;
@@ -1048,6 +1153,12 @@
 		flex: 1 1 140px;
 		border: 1px solid var(--va-border);
 		background: transparent;
+		color: var(--va-text);
+	}
+
+	.ghost-button.speed-active {
+		border-color: color-mix(in srgb, var(--va-accent) 45%, var(--va-border));
+		background: color-mix(in srgb, var(--va-accent) 10%, transparent);
 		color: var(--va-text);
 	}
 
