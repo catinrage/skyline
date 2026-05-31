@@ -57,6 +57,10 @@ Create `/opt/skyline/.env` after install, or create `.env` before running locall
 ```bash
 HOST=0.0.0.0
 PORT=9133
+
+# Required before resellers can connect Telegram bot tokens.
+# Generate a long random value and keep it stable.
+TELEGRAM_BOT_TOKEN_SECRET=replace-with-a-long-random-secret
 ```
 
 Optional deployment settings:
@@ -82,6 +86,15 @@ Configure these from the manager panel after first login:
 - Log level and optional log file.
 - SMTP password recovery settings.
 - Hidden shared panel path.
+
+Telegram seller bot setup:
+
+- Set `TELEGRAM_BOT_TOKEN_SECRET` in `.env` before any seller connects a bot. Use a long random value and do not rotate it unless you plan to reconnect all bots.
+- In the manager panel, enable the `telegram_sales_bot` feature from Features.
+- Configure the Telegram SOCKS5 proxy in the feature settings if the Skyline server cannot reach Telegram directly. Use `socks5h://host:port` or `host:port`.
+- Enable bot permission for each top-level reseller from the manager Resellers settings tab.
+- The reseller can then open the Telegram tab, paste the BotFather token, and Skyline will call `getMe`, store the encrypted token, and register a webhook.
+- V1 order intake is seller-focused: customers send `/order GB DAYS PRICE name`, upload a receipt, and the reseller approves or rejects the order from the panel. Approval creates the x-ui config and sends it back to Telegram.
 
 Restart only when changing process-level `.env` values:
 
