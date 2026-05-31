@@ -12,6 +12,7 @@
 	};
 
 	let { data }: { data: PageData } = $props();
+	let submittedLogin = $state(false);
 
 	const managerPath = $derived(data.basePath ? `${data.basePath}/manager` : '/manage');
 	const resellerPath = $derived(data.basePath ? `${data.basePath}/reseller` : '/reseller');
@@ -23,7 +24,7 @@
 
 	$effect(() => {
 		const role = login.result?.role;
-		if (login.result?.loginSuccess && (role === 'admin' || role === 'reseller')) {
+		if (submittedLogin && login.result?.loginSuccess && (role === 'admin' || role === 'reseller')) {
 			const redirectTo = page.url.searchParams.get('redirect') ?? defaultRedirect(role);
 			void goto(redirectTo, { replaceState: true });
 		}
@@ -41,6 +42,7 @@
 >
 	<form
 		{...login.enhance(async ({ submit }) => {
+			submittedLogin = true;
 			await submit();
 			const result = login.result;
 			if (result?.loginSuccess) toast.success(result.loginSuccess);
