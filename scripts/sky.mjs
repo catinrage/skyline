@@ -263,7 +263,7 @@ function printHelp() {
 	]);
 	group('Panel paths', [
 		['sky paths show', 'Show panel paths'],
-		['sky paths set <manager> <reseller>', 'Set hidden base paths'],
+		['sky paths set <base>', 'Set shared hidden base path'],
 		['sky paths clear', 'Reset to default paths']
 	]);
 	group('Resellers', [
@@ -623,8 +623,11 @@ const commands = {
 			try {
 				const managerBasePath = await getSetting(db, 'manager_base_path');
 				const resellerBasePath = await getSetting(db, 'reseller_base_path');
+				const sharedBasePath =
+					managerBasePath && managerBasePath === resellerBasePath ? managerBasePath : '';
 				section('Panel paths');
 				kv([
+					['Login', theme.value(sharedBasePath ? `/${sharedBasePath}/login` : '/login')],
 					['Manager', theme.value(managerBasePath ? `/${managerBasePath}/manager` : '/manage')],
 					[
 						'Reseller',
@@ -636,24 +639,17 @@ const commands = {
 			}
 		},
 
-		async set(managerBase, resellerBase) {
-			const nextManagerBase = validatePanelBasePath(
-				requireArg(managerBase, 'sky paths set <manager-base> <reseller-base>')
-			);
-			const nextResellerBase = validatePanelBasePath(
-				requireArg(resellerBase, 'sky paths set <manager-base> <reseller-base>')
-			);
-			if (nextManagerBase && nextResellerBase && nextManagerBase === nextResellerBase) {
-				throw new Error('Manager and reseller hidden paths cannot be the same.');
-			}
+		async set(basePath) {
+			const nextBasePath = validatePanelBasePath(requireArg(basePath, 'sky paths set <base>'));
 			const db = getDb();
 			try {
-				await setSetting(db, 'manager_base_path', nextManagerBase);
-				await setSetting(db, 'reseller_base_path', nextResellerBase);
+				await setSetting(db, 'manager_base_path', nextBasePath);
+				await setSetting(db, 'reseller_base_path', nextBasePath);
 				ok('Panel paths updated.');
 				kv([
-					['Manager', theme.value(`/${nextManagerBase}/manager`)],
-					['Reseller', theme.value(`/${nextResellerBase}/reseller`)]
+					['Login', theme.value(`/${nextBasePath}/login`)],
+					['Manager', theme.value(`/${nextBasePath}/manager`)],
+					['Reseller', theme.value(`/${nextBasePath}/reseller`)]
 				]);
 			} finally {
 				db.close();
@@ -933,9 +929,8 @@ async function pathsMenu() {
 	if (action === 'back') return;
 	if (action === 'show') return commands.paths.show();
 	if (action === 'set') {
-		const managerBase = await askText('Manager base path:');
-		const resellerBase = await askText('Reseller base path:');
-		return commands.paths.set(managerBase, resellerBase);
+		const basePath = await askText('Shared base path:');
+		return commands.paths.set(basePath);
 	}
 	if (action === 'clear') {
 		if (await askConfirm('Reset panel paths to defaults?')) return commands.paths.clear();

@@ -25,6 +25,7 @@
 	const segments = $derived(page.url.pathname.split('/').filter(Boolean));
 	const hiddenManagerMatch = $derived(page.url.pathname.match(/^\/([^/]+)\/(manager|manage)(?:\/|$)/));
 	const basePath = $derived(hiddenManagerMatch ? `/${hiddenManagerMatch[1]}/${hiddenManagerMatch[2]}` : '/manage');
+	const loginPath = $derived(hiddenManagerMatch ? `/${hiddenManagerMatch[1]}/login` : '/login');
 	const currentTab = $derived(segments[hiddenManagerMatch ? 2 : 1] ?? 'traffic');
 
 	const reportCount = $derived(
@@ -64,7 +65,7 @@
 			const current = page.url.pathname + (page.url.search || '');
 			const isLoginPage = current.endsWith('/login') || current.includes('/login?');
 			if (!isLoginPage) {
-				void goto(`${basePath}/login?redirect=${encodeURIComponent(current)}`, { replaceState: true });
+				void goto(`${loginPath}?panel=manager&redirect=${encodeURIComponent(current)}`, { replaceState: true });
 			}
 		}
 	});

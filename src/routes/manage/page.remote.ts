@@ -936,10 +936,9 @@ export const updateVlessRewrites = form(
 
 export const updatePanelPaths = form(
 	z.object({
-		managerBasePath: z.string().trim().max(80, 'مسیر مدیریت بیش از حد طولانی است.'),
-		resellerBasePath: z.string().trim().max(80, 'مسیر فروشنده بیش از حد طولانی است.')
+		panelBasePath: z.string().trim().max(80, 'مسیر پنل بیش از حد طولانی است.')
 	}),
-	async ({ managerBasePath, resellerBasePath }) => {
+	async ({ panelBasePath }) => {
 		const cookies = await requireAdminSession();
 
 		if (!cookies) {
@@ -950,12 +949,12 @@ export const updatePanelPaths = form(
 
 		try {
 			await updatePanelPathSettings({
-				managerBasePath,
-				resellerBasePath
+				managerBasePath: panelBasePath,
+				resellerBasePath: panelBasePath
 			});
 		} catch (error) {
 			return {
-				panelPathError: error instanceof Error ? error.message : 'ذخیره مسیرهای مخفی انجام نشد.'
+				panelPathError: error instanceof Error ? error.message : 'ذخیره مسیر مخفی انجام نشد.'
 			};
 		}
 
@@ -963,7 +962,7 @@ export const updatePanelPaths = form(
 
 		return {
 			panelPathSuccess:
-				'مسیرهای مخفی ذخیره شد. اگر مسیر مدیریت را تنظیم کردید، از این به بعد از مسیر جدید وارد شوید.'
+				'مسیر مخفی ذخیره شد. اگر مسیر را تنظیم کردید، از این به بعد از مسیر جدید وارد شوید.'
 		};
 	}
 );

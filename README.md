@@ -7,7 +7,7 @@ Skyline is a SvelteKit and Node.js control panel for operating a VPN business on
 - Manager panel for traffic, resellers, plans, groups, credit requests, reports, backups, runtime settings, SMTP settings, client apps, and security controls.
 - Reseller panel for creating and managing configs, finance, tickets, sub-resellers, account security, and custom messages.
 - Public user panel at `/user/:uuid` with traffic, expiry, VLESS link, QR code, subscription support, and latency/report actions.
-- Hidden manager/reseller base paths so `/manage` and `/reseller` can be disabled from public use.
+- Hidden shared panel base path so `/manage`, `/reseller`, and `/login` can move under one private prefix.
 - Unified Skyline login screen for manager and reseller routes.
 - SMTP-backed password recovery for reseller accounts.
 - `sky` CLI for service control, admin credential reset, panel path management, reseller account operations, updates, and DB checks.
@@ -81,7 +81,7 @@ Configure these from the manager panel after first login:
 - Xray binary path for server-side latency tests.
 - Log level and optional log file.
 - SMTP password recovery settings.
-- Hidden manager/reseller panel paths.
+- Hidden shared panel path.
 
 Restart only when changing process-level `.env` values:
 
@@ -144,11 +144,11 @@ Panel path commands:
 
 ```bash
 sky paths show
-sky paths set managersecret resellersecret
+sky paths set secretpanel
 sky paths clear
 ```
 
-When paths are set, manager login moves to `/<managersecret>/manager` and reseller login moves to `/<resellersecret>/reseller`. The default `/manage` and `/reseller` paths are disabled by the app when hidden paths are configured.
+When a path is set, login moves to `/<secretpanel>/login`, manager moves to `/<secretpanel>/manager`, and reseller moves to `/<secretpanel>/reseller`. Legacy default paths redirect to the configured private prefix.
 
 Reseller commands:
 

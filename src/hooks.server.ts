@@ -1,5 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import { logger } from '$lib/server/logger';
+import { getPanelPathSettings, getSharedPanelBasePath } from '$lib/server/admin';
 import { getSafeClientAddress } from '$lib/server/request';
 import {
 	buildUserSubscriptionResponse,
@@ -10,15 +11,62 @@ import type { Handle } from '@sveltejs/kit';
 
 const requestLogger = logger.child('http');
 
+function panelLoginRedirect(pathname: string, panel: 'manager' | 'reseller', sourceUrl: URL) {
+	const target = new URL(pathname, sourceUrl);
+	sourceUrl.searchParams.forEach((value, key) => target.searchParams.set(key, value));
+	target.searchParams.set('panel', panel);
+	return target.pathname + target.search;
+}
+
 export const handle: Handle = async ({ event, resolve }) => {
-	// Redirect legacy /*/manager/* URLs → /*/manage/* so old bookmarks keep working.
-	const managerAlias = event.url.pathname.match(/^(\/[^/]+)\/manager(\/.*)?$/);
-	if (managerAlias) {
-		throw redirect(301, `${managerAlias[1]}/manage${managerAlias[2] ?? ''}`);
+	const path = event.url.pathname;
+	const hiddenManageAlias = path.match(/^(\/[^/]+)\/manage(\/.*)?$/);
+	if (hiddenManageAlias) {
+		throw redirect(
+			301,
+			`${hiddenManageAlias[1]}/manager${hiddenManageAlias[2] ?? ''}${event.url.search}`
+		);
+	}
+
+	const legacyHiddenLogin = path.match(/^\/([^/]+)\/(manager|reseller)\/login\/?$/);
+	if (legacyHiddenLogin) {
+		const panel = legacyHiddenLogin[2] === 'manager' ? 'manager' : 'reseller';
+		throw redirect(301, panelLoginRedirect(`/${legacyHiddenLogin[1]}/login`, panel, event.url));
+	}
+
+	if (path === '/manage/login' || path === '/reseller/login') {
+		const settings = await getPanelPathSettings();
+		const sharedBasePath = getSharedPanelBasePath(settings);
+		const panel = path.startsWith('/manage') ? 'manager' : 'reseller';
+		throw redirect(
+			301,
+			panelLoginRedirect(`${sharedBasePath ? `/${sharedBasePath}` : ''}/login`, panel, event.url)
+		);
+	}
+
+	if (path === '/login') {
+		const settings = await getPanelPathSettings();
+		const sharedBasePath = getSharedPanelBasePath(settings);
+		if (sharedBasePath) {
+			throw redirect(302, `/${sharedBasePath}/login${event.url.search}`);
+		}
+	}
+
+	const legacyDefaultPanel = path.match(/^\/(manage|reseller)(\/.*)?$/);
+	if (legacyDefaultPanel) {
+		const settings = await getPanelPathSettings();
+		const sharedBasePath = getSharedPanelBasePath(settings);
+		if (sharedBasePath) {
+			const panel = legacyDefaultPanel[1] === 'manage' ? 'manager' : 'reseller';
+			throw redirect(
+				301,
+				`/${sharedBasePath}/${panel}${legacyDefaultPanel[2] ?? ''}${event.url.search}`
+			);
+		}
 	}
 
 	const startedAt = Date.now();
-	const userRouteMatch = event.url.pathname.match(/^\/user\/([^/]+)\/?$/);
+	const userRouteMatch = path.match(/^\/user\/([^/]+)\/?$/);
 	let response: Response;
 
 	if (userRouteMatch && shouldServeUserSubscription(event)) {

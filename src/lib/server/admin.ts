@@ -602,10 +602,6 @@ export async function updatePanelPathSettings(settings: PanelPathSettings) {
 	const managerBasePath = validatePanelBasePath(settings.managerBasePath);
 	const resellerBasePath = validatePanelBasePath(settings.resellerBasePath);
 
-	if (managerBasePath && resellerBasePath && managerBasePath === resellerBasePath) {
-		throw new Error('مسیر مخفی مدیریت و فروشنده نباید یکسان باشد.');
-	}
-
 	await setSetting('manager_base_path', managerBasePath);
 	await setSetting('reseller_base_path', resellerBasePath);
 	adminLogger.warn('Updated protected panel paths.', {
@@ -635,6 +631,21 @@ export async function isHiddenResellerPathAllowed(basePath: string) {
 		settings.resellerBasePath.length > 0 &&
 		normalizePanelBasePath(basePath) === settings.resellerBasePath
 	);
+}
+
+export async function isHiddenPanelLoginPathAllowed(basePath: string) {
+	const settings = await getPanelPathSettings();
+	const normalized = normalizePanelBasePath(basePath);
+	return (
+		(settings.managerBasePath.length > 0 && normalized === settings.managerBasePath) ||
+		(settings.resellerBasePath.length > 0 && normalized === settings.resellerBasePath)
+	);
+}
+
+export function getSharedPanelBasePath(settings: PanelPathSettings) {
+	return settings.managerBasePath && settings.managerBasePath === settings.resellerBasePath
+		? settings.managerBasePath
+		: '';
 }
 
 export async function getFeatureFlags() {

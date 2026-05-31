@@ -24,6 +24,7 @@
 	const segments = $derived(page.url.pathname.split('/').filter(Boolean));
 	const hiddenMatch = $derived(page.url.pathname.match(/^\/([^/]+)\/reseller(?:\/|$)/));
 	const basePath = $derived(hiddenMatch ? `/${hiddenMatch[1]}/reseller` : '/reseller');
+	const loginPath = $derived(hiddenMatch ? `/${hiddenMatch[1]}/login` : '/login');
 	const currentTab = $derived(segments[hiddenMatch ? 2 : 1] ?? 'overview');
 
 	const panelState = $derived(resellerState.current);
@@ -109,7 +110,7 @@
 			const current = page.url.pathname + (page.url.search || '');
 			const isLoginPage = current.endsWith('/login') || current.includes('/login?');
 			if (!isLoginPage) {
-				void goto(`${basePath}/login?redirect=${encodeURIComponent(current)}`, { replaceState: true });
+				void goto(`${loginPath}?panel=reseller&redirect=${encodeURIComponent(current)}`, { replaceState: true });
 			}
 		}
 	});

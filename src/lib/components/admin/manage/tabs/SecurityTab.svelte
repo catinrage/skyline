@@ -14,13 +14,19 @@
 
 	let { data }: Props = $props();
 
-	const managerPathPreview = $derived(buildHiddenPanelPath(data.panelPathSettings.managerBasePath, 'manager'));
-	const resellerPathPreview = $derived(buildHiddenPanelPath(data.panelPathSettings.resellerBasePath, 'reseller'));
-	const hasHiddenPaths = $derived(Boolean(data.panelPathSettings.managerBasePath && data.panelPathSettings.resellerBasePath));
+	const panelBasePath = $derived(
+		data.panelPathSettings.managerBasePath || data.panelPathSettings.resellerBasePath || ''
+	);
+	const loginPathPreview = $derived(buildHiddenPanelPath(panelBasePath, 'login'));
+	const managerPathPreview = $derived(buildHiddenPanelPath(panelBasePath, 'manager'));
+	const resellerPathPreview = $derived(buildHiddenPanelPath(panelBasePath, 'reseller'));
+	const hasHiddenPaths = $derived(Boolean(panelBasePath));
 
-	function buildHiddenPanelPath(basePath: string, panel: 'manager' | 'reseller') {
+	function buildHiddenPanelPath(basePath: string, panel: 'login' | 'manager' | 'reseller') {
 		const normalized = basePath.trim().replace(/^\/+|\/+$/g, '').toLowerCase();
-		return normalized ? `/${normalized}/${panel}` : `/${panel === 'manager' ? 'manage' : 'reseller'}`;
+		if (normalized) return `/${normalized}/${panel}`;
+		if (panel === 'login') return '/login';
+		return `/${panel === 'manager' ? 'manage' : 'reseller'}`;
 	}
 
 	async function handleSubmit(submit: () => Promise<void>) {
@@ -49,55 +55,41 @@
 			<div class="panel-head">
 				<div>
 					<div class="panel-title">مسیر مخفی پنل‌ها</div>
-					<div class="panel-sub">مسیرهای عمومی بعد از تنظیم base path باید ۴۰۴ شوند.</div>
+					<div class="panel-sub">یک base path مشترک برای ورود، مدیریت و فروشندگان تنظیم کنید.</div>
 				</div>
 			</div>
 			<div class="panel-body">
 				{#if !hasHiddenPaths}
 					<div class="security-warning">
 						<AnimatedIcon name="shield" size={14} />
-						<span>برای کاهش اسکن خودکار و تلاش ورود، برای هر دو پنل مسیر مخفی تنظیم کنید.</span>
+						<span>برای کاهش اسکن خودکار و تلاش ورود، یک مسیر مخفی مشترک برای پنل‌ها تنظیم کنید.</span>
 					</div>
 				{/if}
 
 				<div class="field-block">
-					<div class="va-section-label">پایه مسیر مدیریت</div>
+					<div class="va-section-label">پایه مسیر مشترک</div>
 					<div class="va-field-shell path-field">
 						<span class="path-prefix">/</span>
 						<input
-							id="manager-base-path"
+							id="panel-base-path"
 							type="text"
-							name="managerBasePath"
-							value={data.panelPathSettings.managerBasePath ?? ''}
-							placeholder="secret-mgmt"
+							name="panelBasePath"
+							value={panelBasePath}
+							placeholder="secret-panel"
 							dir="ltr"
 							autocomplete="off"
 						/>
-						<span class="va-field-suffix" dir="ltr">/manager</span>
+						<span class="va-field-suffix" dir="ltr">/login</span>
 					</div>
-					<div class="path-preview" dir="ltr">→ {managerPathPreview}</div>
-				</div>
-
-				<div class="field-block">
-					<div class="va-section-label">پایه مسیر فروشنده</div>
-					<div class="va-field-shell path-field">
-						<span class="path-prefix">/</span>
-						<input
-							id="reseller-base-path"
-							type="text"
-							name="resellerBasePath"
-							value={data.panelPathSettings.resellerBasePath ?? ''}
-							placeholder="secret-sale"
-							dir="ltr"
-							autocomplete="off"
-						/>
-						<span class="va-field-suffix" dir="ltr">/reseller</span>
+					<div class="path-preview-list" dir="ltr">
+						<div>→ {loginPathPreview}</div>
+						<div>→ {managerPathPreview}</div>
+						<div>→ {resellerPathPreview}</div>
 					</div>
-					<div class="path-preview" dir="ltr">→ {resellerPathPreview}</div>
 				</div>
 
 				<div class="help-box">
-					مجاز: ۳ تا ۶۴ کاراکتر، حروف انگلیسی کوچک، عدد، خط تیره و آندرلاین. مسیر خالی یعنی مسیر عمومی قبلی فعال بماند.
+					مجاز: ۳ تا ۶۴ کاراکتر، حروف انگلیسی کوچک، عدد، خط تیره و آندرلاین. مسیر خالی یعنی مسیرهای پیش‌فرض فعال بمانند.
 				</div>
 			</div>
 		</div>
@@ -214,7 +206,9 @@
 		font: 500 12px var(--va-font-mono);
 	}
 
-	.path-preview {
+	.path-preview-list {
+		display: grid;
+		gap: 3px;
 		color: var(--va-text-faint);
 		font: 500 11px var(--va-font-mono);
 		text-align: left;
