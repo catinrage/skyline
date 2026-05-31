@@ -697,6 +697,7 @@
 			{@const inboundForm = updateResellerInbounds.for(selected.id)}
 			{@const subPermForm = toggleResellerSubPermission.for(selected.id)}
 			{@const subLimitForm = updateResellerSubLimit.for(selected.id)}
+			{@const hardDeleteForm = hardDeleteReseller.for(selected.id)}
 
 			<div class="va-inspector-head">
 				<VaAvatar name={selected.username} size={28} />
@@ -974,7 +975,6 @@
 							<div class="delete-blocked">{selected.deleteBlockedReason}</div>
 						{/if}
 
-						{@const hardDeleteForm = hardDeleteReseller.for(selected.id)}
 						<form {...hardDeleteForm.enhance(async ({ submit }) => {
 							const confirmed = await awaitHardDeleteConfirm(selected.username);
 							if (!confirmed) return;
