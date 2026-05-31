@@ -10,10 +10,12 @@
 	let { form }: { form: ActionData | null } = $props();
 	let lookup = $state('');
 	let pending = $state(false);
+	let syncedFormInput = $state<string | undefined>(undefined);
 
 	$effect(() => {
-		if (typeof form?.input === 'string' && form.input !== lookup) {
+		if (typeof form?.input === 'string' && form.input !== syncedFormInput) {
 			lookup = form.input;
+			syncedFormInput = form.input;
 		}
 	});
 </script>
