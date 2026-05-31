@@ -153,9 +153,9 @@
 					<AnimatedIcon name="shield" size={14} />
 					<span>قبل از جایگزینی، یک نسخه امن از دیتابیس فعلی در پوشه backups ذخیره می‌شود.</span>
 				</div>
-				<button type="submit" class="admin-btn admin-btn-danger full-action">
+				<button type="submit" class="admin-btn admin-btn-danger full-action" disabled={restoreDatabaseBackup.pending > 0}>
 					<AnimatedIcon name="cloud" size={13} />
-					<span>بازیابی دیتابیس</span>
+					<span>{restoreDatabaseBackup.pending > 0 ? 'در حال بازیابی...' : 'بازیابی دیتابیس'}</span>
 				</button>
 			</form>
 		</div>

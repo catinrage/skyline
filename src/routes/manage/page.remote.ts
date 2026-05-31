@@ -1192,7 +1192,8 @@ export const resetResellerPassword = form(
 			await getManageState().set(await buildManageState(true));
 
 			return {
-				resellerResetSuccess: `گذرواژه فروشنده به "${newPassword}" تغییر کرد و تغییر اجباری فعال شد.`
+				resellerResetSuccess: true,
+				resellerResetPassword: newPassword
 			};
 		} catch (error) {
 			return {

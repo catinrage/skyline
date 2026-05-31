@@ -134,6 +134,7 @@
 	let contextMenuStyle = $state('');
 	let mobileDetailsOpen = $state(false);
 	let resetTarget = $state<Reseller | null>(null);
+	let passwordRevealed = $state<{ username: string; password: string } | null>(null);
 	let createModalOpen = $state(false);
 	let selectedTab = $state<InspectorTab>('overview');
 	let currentPage = $state(1);
@@ -289,12 +290,15 @@
 
 	async function handlePasswordReset(
 		form: ReturnType<typeof resetResellerPassword.for>,
-		submit: () => Promise<void>
+		submit: () => Promise<void>,
+		username: string
 	) {
 		await submit();
 		const result = form.result;
-		if (result?.resellerResetSuccess) toast.success(result.resellerResetSuccess);
-		if (result?.resellerResetError) toast.error(result.resellerResetError);
+		if (result?.resellerResetSuccess && result.resellerResetPassword) {
+			passwordRevealed = { username, password: result.resellerResetPassword as string };
+		}
+		if (result?.resellerResetError) toast.error(result.resellerResetError as string);
 		resetTarget = null;
 		closeContextMenu();
 	}
@@ -554,7 +558,7 @@
 											</button>
 											<button type="button" onclick={() => (resetTarget = reseller)}>
 												<span class="mdi mdi-lock-reset"></span>
-												<span>ریست گذرواژه به 1234</span>
+												<span>بازنشانی گذرواژه</span>
 											</button>
 										</div>
 									{/if}
@@ -756,7 +760,9 @@
 										max="10000"
 										value={selected.subResellerLimit}
 									/>
-									<button type="submit" class="admin-btn admin-btn-ghost">ذخیره</button>
+									<button type="submit" class="admin-btn admin-btn-ghost" disabled={subLimitForm.pending > 0}>
+										{subLimitForm.pending > 0 ? '...' : 'ذخیره'}
+									</button>
 								</div>
 								<p>مقدار صفر ساخت زیرفروشنده جدید را متوقف می‌کند.</p>
 							</form>
@@ -798,7 +804,9 @@
 									<input type="hidden" name="resellerId" value={selected.id} />
 									<input type="hidden" name="sessionId" value={session.id} />
 									<span>{session.userAgent || 'مرورگر ناشناس'}<small>{formatDate(session.lastUsedAt || session.createdAt)}</small></span>
-									<button type="submit" class="admin-btn admin-btn-ghost">لغو</button>
+									<button type="submit" class="admin-btn admin-btn-ghost" disabled={sessionForm.pending > 0}>
+										{sessionForm.pending > 0 ? '...' : 'لغو'}
+									</button>
 								</form>
 							{/each}
 						{/if}
@@ -872,7 +880,9 @@
 								/>
 							{/each}
 							<div class="field-hint">اگر هیچ گزینه‌ای ذخیره نشود، همه سرورها مجاز خواهند بود.</div>
-							<button type="submit" class="admin-btn admin-btn-ghost full-width">ذخیره دسترسی سرورها</button>
+							<button type="submit" class="admin-btn admin-btn-ghost full-width" disabled={inboundForm.pending > 0}>
+								{inboundForm.pending > 0 ? 'در حال ذخیره...' : 'ذخیره دسترسی سرورها'}
+							</button>
 						{/if}
 					</div>
 				</form>
@@ -889,9 +899,9 @@
 						>
 							<input type="hidden" name="id" value={selected.id} />
 							<input type="hidden" name="enabled" value="false" />
-							<button type="submit" class="va-action-row">
+							<button type="submit" class="va-action-row" disabled={allConfigsDisableForm.pending > 0}>
 								<AnimatedIcon name="toggle" size={13} />
-								<span>قطع همه کانفیگ‌ها</span>
+								<span>{allConfigsDisableForm.pending > 0 ? 'در حال اجرا...' : 'قطع همه کانفیگ‌ها'}</span>
 								<AnimatedIcon name="chevron-left" size={12} />
 							</button>
 						</form>
@@ -905,9 +915,9 @@
 						>
 							<input type="hidden" name="id" value={selected.id} />
 							<input type="hidden" name="enabled" value="true" />
-							<button type="submit" class="va-action-row">
+							<button type="submit" class="va-action-row" disabled={allConfigsEnableForm.pending > 0}>
 								<AnimatedIcon name="toggle" size={13} active />
-								<span>فعال‌سازی همه</span>
+								<span>{allConfigsEnableForm.pending > 0 ? 'در حال اجرا...' : 'فعال‌سازی همه'}</span>
 								<AnimatedIcon name="chevron-left" size={12} />
 							</button>
 						</form>
@@ -921,9 +931,9 @@
 								})}
 							>
 								<input type="hidden" name="id" value={selected.id} />
-								<button type="submit" class="va-action-row danger">
+								<button type="submit" class="va-action-row danger" disabled={deleteForm.pending > 0}>
 									<AnimatedIcon name="flag" size={13} />
-									<span>حذف امن حساب</span>
+									<span>{deleteForm.pending > 0 ? 'در حال حذف...' : 'حذف امن حساب'}</span>
 									<AnimatedIcon name="chevron-left" size={12} />
 								</button>
 							</form>
@@ -1020,6 +1030,7 @@
 
 {#if resetTarget}
 	{@const resetForm = resetResellerPassword.for(resetTarget.id)}
+	{@const resetUsername = resetTarget.username}
 	<div class="va-modal-backdrop" dir="rtl">
 		<div class="va-modal-card">
 			<div class="va-modal-icon danger">
@@ -1029,13 +1040,12 @@
 				<div class="va-section-label">تایید امنیتی</div>
 				<h3>بازنشانی گذرواژه فروشنده</h3>
 				<p>
-					گذرواژه «{resetTarget.username}» به <code dir="ltr">1234</code> تغییر می‌کند و در ورود بعدی مجبور به تغییر
-					گذرواژه خواهد شد.
+					یک گذرواژه تصادفی برای «{resetTarget.username}» تولید می‌شود. پس از تأیید، گذرواژه جدید نمایش داده می‌شود.
 				</p>
 			</div>
 			<form
 				{...resetForm.enhance(async ({ submit }) => {
-					await handlePasswordReset(resetForm, submit);
+					await handlePasswordReset(resetForm, submit, resetUsername);
 				})}
 			>
 				<input type="hidden" name="id" value={resetTarget.id} />
@@ -1043,12 +1053,46 @@
 					<button type="button" class="admin-btn admin-btn-ghost" onclick={() => (resetTarget = null)}>
 						انصراف
 					</button>
-					<button type="submit" class="admin-btn admin-btn-danger">
+					<button type="submit" class="admin-btn admin-btn-danger" disabled={resetForm.pending > 0}>
 						<AnimatedIcon name="key" size={13} />
-						<span>ریست به 1234</span>
+						<span>{resetForm.pending > 0 ? 'در حال بازنشانی...' : 'بازنشانی گذرواژه'}</span>
 					</button>
 				</div>
 			</form>
+		</div>
+	</div>
+{/if}
+
+{#if passwordRevealed}
+	<div class="va-modal-backdrop" dir="rtl">
+		<div class="va-modal-card">
+			<div class="va-modal-icon">
+				<AnimatedIcon name="key" size={16} active />
+			</div>
+			<div>
+				<div class="va-section-label">گذرواژه جدید</div>
+				<h3>بازنشانی انجام شد</h3>
+				<p>گذرواژه «{passwordRevealed.username}» تغییر کرد. این گذرواژه را برای فروشنده ارسال کنید.</p>
+			</div>
+			<div class="password-reveal-box">
+				<code class="password-reveal-code" dir="ltr">{passwordRevealed.password}</code>
+				<button
+					type="button"
+					class="admin-btn admin-btn-ghost"
+					onclick={() => {
+						navigator.clipboard.writeText(passwordRevealed!.password);
+						toast.success('گذرواژه کپی شد.');
+					}}
+				>
+					<span class="mdi mdi-content-copy"></span>
+					<span>کپی</span>
+				</button>
+			</div>
+			<div class="va-modal-actions">
+				<button type="button" class="admin-btn admin-btn-primary" onclick={() => (passwordRevealed = null)}>
+					متوجه شدم
+				</button>
+			</div>
 		</div>
 	</div>
 {/if}
@@ -1081,16 +1125,11 @@
 			<input type="hidden" name="debtCapToman" value="" />
 		</div>
 
-		<div class="modal-security-note">
-			<AnimatedIcon name="shield" size={14} />
-			<span>فروشنده در اولین ورود باید گذرواژه موقت را تغییر دهد.</span>
-		</div>
-
 		<div class="modal-form-actions">
 			<button type="button" class="admin-btn admin-btn-ghost" onclick={() => (createModalOpen = false)}>انصراف</button>
-			<button type="submit" class="admin-btn admin-btn-primary">
+			<button type="submit" class="admin-btn admin-btn-primary" disabled={createReseller.pending > 0}>
 				<AnimatedIcon name="check" size={13} />
-				<span>ساخت حساب</span>
+				<span>{createReseller.pending > 0 ? 'در حال ساخت...' : 'ساخت حساب'}</span>
 			</button>
 		</div>
 	</form>
@@ -1636,6 +1675,25 @@
 		justify-content: flex-end;
 		gap: 8px;
 		margin-top: 4px;
+	}
+
+	.password-reveal-box {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		background: var(--va-bg-raised);
+		border: 1px solid var(--va-border);
+		border-radius: 8px;
+		padding: 10px 14px;
+	}
+
+	.password-reveal-code {
+		flex: 1;
+		font-family: var(--va-font-mono);
+		font-size: 15px;
+		letter-spacing: 0.5px;
+		color: var(--va-text);
+		word-break: break-all;
 	}
 
 	@media (max-width: 760px) {

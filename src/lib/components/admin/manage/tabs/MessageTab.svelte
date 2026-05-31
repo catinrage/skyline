@@ -37,9 +37,9 @@
 			<AnimatedIcon name="spark-down" size={13} />
 			<span>پاک کردن پیام</span>
 		</button>
-		<button type="submit" class="admin-btn admin-btn-primary">
+		<button type="submit" class="admin-btn admin-btn-primary" disabled={updateMessage.pending > 0}>
 			<AnimatedIcon name="check" size={13} />
-			<span>ذخیره پیام</span>
+			<span>{updateMessage.pending > 0 ? 'در حال ذخیره...' : 'ذخیره پیام'}</span>
 		</button>
 	</div>
 

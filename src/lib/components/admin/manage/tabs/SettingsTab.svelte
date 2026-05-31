@@ -142,13 +142,13 @@
 
 <div class="settings-va">
 	<div class="settings-actions">
-		<button type="button" class="admin-btn admin-btn-secondary" onclick={testSettings}>
+		<button type="button" class="admin-btn admin-btn-secondary" onclick={testSettings} disabled={testRuntimeOptions.pending > 0}>
 			<AnimatedIcon name="sparkle" size={13} />
-			<span>تست اتصال</span>
+			<span>{testRuntimeOptions.pending > 0 ? 'در حال تست...' : 'تست اتصال'}</span>
 		</button>
-		<button type="submit" form="runtime-settings-form" class="admin-btn admin-btn-primary">
+		<button type="submit" form="runtime-settings-form" class="admin-btn admin-btn-primary" disabled={updateRuntimeOptions.pending > 0}>
 			<AnimatedIcon name="check" size={13} />
-			<span>ذخیره تنظیمات</span>
+			<span>{updateRuntimeOptions.pending > 0 ? 'در حال ذخیره...' : 'ذخیره تنظیمات'}</span>
 		</button>
 	</div>
 
@@ -391,7 +391,9 @@
 			</div>
 			<div class="smtp-footer">
 				<span class="field-hint">برای سرویس‌های پورت 465 گزینه TLS مستقیم و برای پورت 587 معمولاً STARTTLS را انتخاب کنید.</span>
-				<button type="submit" class="admin-btn admin-btn-primary">ذخیره ایمیل</button>
+				<button type="submit" class="admin-btn admin-btn-primary" disabled={updateSmtp.pending > 0}>
+					{updateSmtp.pending > 0 ? 'در حال ذخیره...' : 'ذخیره ایمیل'}
+				</button>
 			</div>
 		</div>
 	</form>

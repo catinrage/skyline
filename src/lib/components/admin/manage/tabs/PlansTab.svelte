@@ -308,7 +308,9 @@
 						<div class="va-field-shell"><input type="number" name="quotaGb" min="1" value={selected.quotaGb} /><span class="va-field-suffix">GB</span></div>
 						<div class="va-field-shell"><input type="text" inputmode="numeric" name="priceToman" value={currencyValue(selected.priceToman)} oninput={formatCurrencyInput} /><span class="va-field-suffix">تومان</span></div>
 					</div>
-					<button type="submit" class="admin-btn admin-btn-ghost full">ذخیره بسته</button>
+					<button type="submit" class="admin-btn admin-btn-ghost full" disabled={editForm.pending > 0}>
+						{editForm.pending > 0 ? 'در حال ذخیره...' : 'ذخیره بسته'}
+					</button>
 				</form>
 
 				{@const activeForm = toggleCreditPackage.for(selected.id)}
@@ -319,9 +321,9 @@
 				})} class="action-form">
 					<input type="hidden" name="id" value={selected.id} />
 					<input type="hidden" name="enabled" value={selected.isActive ? 'false' : 'true'} />
-					<button type="submit" class="admin-btn admin-btn-ghost full">
+					<button type="submit" class="admin-btn admin-btn-ghost full" disabled={activeForm.pending > 0}>
 						<AnimatedIcon name={selected.isActive ? 'toggle' : 'check'} size={13} />
-						<span>{selected.isActive ? 'غیرفعال کردن بسته' : 'فعال کردن بسته'}</span>
+						<span>{activeForm.pending > 0 ? 'در حال اجرا...' : selected.isActive ? 'غیرفعال کردن بسته' : 'فعال کردن بسته'}</span>
 					</button>
 				</form>
 
@@ -368,7 +370,10 @@
 			<div class="va-field-shell"><input type="text" inputmode="numeric" name="priceToman" placeholder="3,750,000" oninput={formatCurrencyInput} /><span class="va-field-suffix">تومان</span></div>
 		</div>
 		<label class="select-field"><span>نوع نمایش</span><select class="admin-field" name="isPublic"><option value="true">عمومی</option><option value="false">خصوصی</option></select></label>
-		<button type="submit" class="admin-btn admin-btn-primary full"><AnimatedIcon name="check" size={13} /><span>ساخت بسته</span></button>
+		<button type="submit" class="admin-btn admin-btn-primary full" disabled={createCreditPackage.pending > 0}>
+			<AnimatedIcon name="check" size={13} />
+			<span>{createCreditPackage.pending > 0 ? 'در حال ساخت...' : 'ساخت بسته'}</span>
+		</button>
 	</form>
 </Modal>
 
@@ -392,7 +397,10 @@
 				{/each}
 			</select>
 		</label>
-		<button type="submit" class="admin-btn admin-btn-primary full"><AnimatedIcon name="check" size={13} /><span>ساخت پلن</span></button>
+		<button type="submit" class="admin-btn admin-btn-primary full" disabled={createPlan.pending > 0}>
+			<AnimatedIcon name="check" size={13} />
+			<span>{createPlan.pending > 0 ? 'در حال ساخت...' : 'ساخت پلن'}</span>
+		</button>
 	</form>
 </Modal>
 
@@ -426,7 +434,9 @@
 						{/each}
 					</select>
 				</label>
-				<button type="submit" class="admin-btn admin-btn-ghost full">ذخیره پلن</button>
+				<button type="submit" class="admin-btn admin-btn-ghost full" disabled={editPlanForm.pending > 0}>
+					{editPlanForm.pending > 0 ? 'در حال ذخیره...' : 'ذخیره پلن'}
+				</button>
 			</form>
 
 			<!-- active toggle -->

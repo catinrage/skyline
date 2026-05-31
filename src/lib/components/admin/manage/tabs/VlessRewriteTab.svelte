@@ -216,9 +216,9 @@
 			<AnimatedIcon name="plus-network" size={13} />
 			<span>افزودن قانون</span>
 		</button>
-		<button type="submit" class="admin-btn admin-btn-primary">
+		<button type="submit" class="admin-btn admin-btn-primary" disabled={updateVlessRewrites.pending > 0}>
 			<AnimatedIcon name="check" size={13} />
-			<span>ذخیره قوانین</span>
+			<span>{updateVlessRewrites.pending > 0 ? 'در حال ذخیره...' : 'ذخیره قوانین'}</span>
 		</button>
 	</div>
 </form>

@@ -38,9 +38,9 @@
 	class="security-va"
 >
 	<div class="security-actions">
-		<button type="submit" class="admin-btn admin-btn-primary">
+		<button type="submit" class="admin-btn admin-btn-primary" disabled={updatePanelPaths.pending > 0}>
 			<AnimatedIcon name="check" size={13} />
-			<span>ذخیره تنظیمات</span>
+			<span>{updatePanelPaths.pending > 0 ? 'در حال ذخیره...' : 'ذخیره تنظیمات'}</span>
 		</button>
 	</div>
 

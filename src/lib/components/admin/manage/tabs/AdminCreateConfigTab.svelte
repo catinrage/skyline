@@ -135,7 +135,9 @@
 		<div class="grid"><label>حجم<input class="admin-field" type="number" min="0.01" step="0.01" bind:value={quotaGb} /></label><label>مدت<input class="admin-field" type="number" min="1" bind:value={durationDays} /></label></div>
 		<label>نام مشتری<input class="admin-field" type="text" bind:value={customerLabel} /></label>
 		<label>یادداشت داخلی<textarea class="admin-field" bind:value={internalNote}></textarea></label>
-		<button class="admin-btn admin-btn-primary full" type="button" disabled={!canCreate || createAdminConfigCommand.pending > 0} onclick={handleCreate}>ساخت کانفیگ</button>
+		<button class="admin-btn admin-btn-primary full" type="button" disabled={!canCreate || createAdminConfigCommand.pending > 0} onclick={handleCreate}>
+			{createAdminConfigCommand.pending > 0 ? 'در حال ساخت...' : 'ساخت کانفیگ'}
+		</button>
 	</div>
 </Modal>
 

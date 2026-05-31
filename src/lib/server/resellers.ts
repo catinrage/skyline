@@ -2159,8 +2159,8 @@ function validateTemplateValues(input: {
 	durationDays: number;
 	priceToman: number;
 }) {
-	if (!Number.isInteger(input.quotaGb) || input.quotaGb <= 1 || input.quotaGb > 50) {
-		throw new Error('حجم قالب باید عدد صحیح بین ۲ تا ۵۰ گیگابایت باشد.');
+	if (!Number.isFinite(input.quotaGb) || input.quotaGb < 0.01) {
+		throw new Error('حجم قالب باید حداقل ۰.۰۱ گیگابایت باشد.');
 	}
 
 	if (!Number.isInteger(input.durationDays) || input.durationDays < 1 || input.durationDays > 365) {
@@ -2172,9 +2172,12 @@ function validateTemplateValues(input: {
 	}
 
 	const name = input.name?.trim().replace(/\s+/g, ' ').slice(0, 64);
+	const quotaLabel = Number.isInteger(input.quotaGb)
+		? `${input.quotaGb}GB`
+		: `${input.quotaGb.toFixed(2).replace(/\.?0+$/, '')}GB`;
 
 	return {
-		name: name || `${input.quotaGb}GB / ${input.durationDays}D`,
+		name: name || `${quotaLabel} / ${input.durationDays}D`,
 		quotaGb: input.quotaGb,
 		durationDays: input.durationDays,
 		priceToman: input.priceToman
@@ -2624,7 +2627,7 @@ export async function createResellerAccount(
 				created_at,
 				updated_at
 			)
-			VALUES (?, ?, ?, 1, '', 1, ?, '', ?, ?, ?)
+			VALUES (?, ?, ?, 1, '', 0, ?, '', ?, ?, ?)
 		`,
 			[
 				username.trim(),

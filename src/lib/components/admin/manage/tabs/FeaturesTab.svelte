@@ -185,7 +185,9 @@
 							</div>
 						{/if}
 
-						<button type="submit" class="settings-save">ذخیره</button>
+						<button type="submit" class="settings-save" disabled={settingsForm.pending > 0}>
+							{settingsForm.pending > 0 ? 'در حال ذخیره...' : 'ذخیره'}
+						</button>
 					</form>
 				{/if}
 			</div>
