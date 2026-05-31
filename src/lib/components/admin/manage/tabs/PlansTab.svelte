@@ -11,13 +11,7 @@
 		setCreditPackageAccessCommand,
 		setCreditPackageVisibilityCommand,
 		toggleCreditPackage,
-		updateCreditPackage,
-		createPlan,
-		updatePlan,
-		togglePlan,
-		togglePlanPublic,
-		grantPlanAccess,
-		revokePlanAccess
+		updateCreditPackage
 	} from '../../../../../routes/manage/page.remote';
 
 	type CreditPackage = {
@@ -32,30 +26,9 @@
 		updatedAt: number;
 	};
 
-	type Plan = {
-		id: number;
-		quotaGb: number;
-		durationDays: number;
-		priceToman: number;
-		inboundId: number;
-		inboundRemarkSnapshot: string | null;
-		isActive: boolean;
-		isPublic: boolean;
-		createdAt: number;
-		updatedAt: number;
-	};
-
-	type PlanAccessEntry = {
-		planId: number;
-		resellerId: number | null;
-		groupId: number | null;
-	};
-
 	type Props = {
 		data: {
 			resellerCreditPackages: CreditPackage[];
-			resellerPlans: Plan[];
-			planAccessEntries: PlanAccessEntry[];
 			resellerGroups: Array<{ id: number; name: string; color: string }>;
 			resellerAccounts: Array<{
 				id: number;
@@ -63,7 +36,6 @@
 				parentResellerId: number | null;
 				isSystemManager: boolean;
 			}>;
-			inboundOptions: Array<{ id: number; remark: string | null }>;
 		};
 	};
 
@@ -109,24 +81,6 @@
 		}
 	]);
 
-	// ── VPN plans state ──────────────────────────────────────────────────────────
-	let selectedPlanId = $state<number | null>(null);
-	let planDetailOpen = $state(false);
-	let createPlanOpen = $state(false);
-	let planPage = $state(1);
-
-	const planPageSize = 10;
-	const planPages = $derived(Math.max(1, Math.ceil(data.resellerPlans.length / planPageSize)));
-	const visiblePlans = $derived(data.resellerPlans.slice((planPage - 1) * planPageSize, planPage * planPageSize));
-	const selectedPlan = $derived(
-		selectedPlanId !== null ? data.resellerPlans.find((p) => p.id === selectedPlanId) ?? null : null
-	);
-	const planAccessForSelected = $derived(
-		selectedPlanId !== null
-			? data.planAccessEntries.filter((e) => e.planId === selectedPlanId)
-			: []
-	);
-	const privatePlanCount = $derived(data.resellerPlans.filter((p) => !p.isPublic).length);
 
 	// ── Helpers ──────────────────────────────────────────────────────────────────
 	function formatDate(timestamp: number) {
@@ -148,11 +102,6 @@
 		input.value = digits ? new Intl.NumberFormat('en-US').format(Number(digits)) : '';
 	}
 
-	function inboundLabel(inboundId: number, snapshot: string | null) {
-		const opt = data.inboundOptions.find((o) => o.id === inboundId);
-		return opt?.remark ?? snapshot ?? String(inboundId);
-	}
-
 	// ── Credit package handlers ──────────────────────────────────────────────────
 	async function create(submit: () => Promise<void>) {
 		await submit();
@@ -163,21 +112,35 @@
 		if (createCreditPackage.result?.creditPackageError) toast.error(createCreditPackage.result.creditPackageError);
 	}
 
+	let visibilityPending = $state(false);
+	let accessPendingKey = $state<string | null>(null);
+
 	async function setVisibility(item: CreditPackage) {
-		const result = await setCreditPackageVisibilityCommand({ id: item.id, isPublic: !item.isPublic });
-		if (result?.creditPackageSuccess) toast.success(result.creditPackageSuccess);
-		if (result?.creditPackageError) toast.error(result.creditPackageError);
+		visibilityPending = true;
+		try {
+			const result = await setCreditPackageVisibilityCommand({ id: item.id, isPublic: !item.isPublic });
+			if (result?.creditPackageSuccess) toast.success(result.creditPackageSuccess);
+			if (result?.creditPackageError) toast.error(result.creditPackageError);
+		} finally {
+			visibilityPending = false;
+		}
 	}
 
 	async function setAccess(item: CreditPackage, type: 'group' | 'reseller', id: number, enabled: boolean) {
-		const result = await setCreditPackageAccessCommand({
-			packageId: item.id,
-			targetType: type,
-			targetId: id,
-			enabled
-		});
-		if (result?.creditPackageSuccess) toast.success(result.creditPackageSuccess);
-		if (result?.creditPackageError) toast.error(result.creditPackageError);
+		const key = `${type}-${id}`;
+		accessPendingKey = key;
+		try {
+			const result = await setCreditPackageAccessCommand({
+				packageId: item.id,
+				targetType: type,
+				targetId: id,
+				enabled
+			});
+			if (result?.creditPackageSuccess) toast.success(result.creditPackageSuccess);
+			if (result?.creditPackageError) toast.error(result.creditPackageError);
+		} finally {
+			accessPendingKey = null;
+		}
 	}
 
 
@@ -222,63 +185,6 @@
 			<div>
 				<button type="button" class="va-icon-btn" disabled={page <= 1} onclick={() => page--}><span class="pagination-prev-icon"><AnimatedIcon name="chevron-left" size={13} /></span></button>
 				<button type="button" class="va-icon-btn" disabled={page >= pages} onclick={() => page++}><AnimatedIcon name="chevron-left" size={13} /></button>
-			</div>
-		</div>
-	{/if}
-</section>
-
-<!-- ── VPN plans ───────────────────────────────────────────────────────────── -->
-<section class="va-card plans-panel">
-	<div class="panel-head">
-		<div>
-			<div class="panel-title">پلن‌های VPN فروشندگان</div>
-			<div class="panel-sub">پلن‌های آماده برای ساخت کانفیگ توسط فروشندگان — عمومی یا با دسترسی خصوصی.</div>
-		</div>
-		<div class="plan-head-badges">
-			{#if privatePlanCount > 0}
-				<span class="badge private">{privatePlanCount.toLocaleString('fa-IR-u-nu-latn')} خصوصی</span>
-			{/if}
-			<button type="button" class="admin-btn admin-btn-primary" onclick={() => (createPlanOpen = true)}>
-				<AnimatedIcon name="plus-network" size={13} /><span>پلن جدید</span>
-			</button>
-		</div>
-	</div>
-
-	{#if data.resellerPlans.length === 0}
-		<EmptyState title="پلنی تعریف نشده" description="اولین پلن VPN فروشندگان را بسازید." icon="inbox" />
-	{:else}
-		<div class="va-table-wrap">
-			<table class="va-table">
-				<thead><tr><th>حجم</th><th>مدت</th><th>قیمت</th><th>سرور</th><th>دسترسی</th><th>وضعیت</th><th>عملیات</th></tr></thead>
-				<tbody>
-					{#each visiblePlans as plan (plan.id)}
-						<tr>
-							<td class="va-mono">{plan.quotaGb.toLocaleString('fa-IR-u-nu-latn')} GB</td>
-							<td class="va-mono">{plan.durationDays.toLocaleString('fa-IR-u-nu-latn')} روز</td>
-							<td class="va-mono">{formatToman(plan.priceToman)} تومان</td>
-							<td class="plan-remark">{inboundLabel(plan.inboundId, plan.inboundRemarkSnapshot)}</td>
-							<td><span class="badge" class:private={!plan.isPublic}>{plan.isPublic ? 'عمومی' : 'خصوصی'}</span></td>
-							<td><span class="badge" class:inactive={!plan.isActive}>{plan.isActive ? 'فعال' : 'غیرفعال'}</span></td>
-							<td>
-								<button
-									type="button"
-									class="admin-btn admin-btn-ghost plan-detail-btn"
-									onclick={() => { selectedPlanId = plan.id; planDetailOpen = true; }}
-								>
-									<AnimatedIcon name="chevron-left" size={11} />
-									<span>جزئیات</span>
-								</button>
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
-		<div class="va-pagination">
-			<span>{planPage} / {planPages}</span>
-			<div>
-				<button type="button" class="va-icon-btn" disabled={planPage <= 1} onclick={() => planPage--}><span class="pagination-prev-icon"><AnimatedIcon name="chevron-left" size={13} /></span></button>
-				<button type="button" class="va-icon-btn" disabled={planPage >= planPages} onclick={() => planPage++}><AnimatedIcon name="chevron-left" size={13} /></button>
 			</div>
 		</div>
 	{/if}
@@ -329,17 +235,20 @@
 
 				<div class="access-panel">
 					<div class="va-section-label">دسترسی خرید</div>
-					<button type="button" class="admin-btn admin-btn-ghost full" onclick={() => setVisibility(selected)}>
+					<button type="button" class="admin-btn admin-btn-ghost full" onclick={() => setVisibility(selected)} disabled={visibilityPending}>
+						{#if visibilityPending}<span class="btn-spinner" aria-hidden="true"></span>{/if}
 						<AnimatedIcon name="toggle" size={13} />
-						<span>{selected.isPublic ? 'تبدیل به خصوصی' : 'تبدیل به عمومی'}</span>
+						<span>{visibilityPending ? 'در حال تغییر...' : selected.isPublic ? 'تبدیل به خصوصی' : 'تبدیل به عمومی'}</span>
 					</button>
 					{#if !selected.isPublic}
 						<p>بسته خصوصی بدون مخاطب به شکل پیش‌نویس پنهان باقی می‌ماند.</p>
 						<div class="va-section-label">گروه‌ها</div>
 						{#each data.resellerGroups as group (group.id)}
 							{@const granted = selected.groupAccessIds.includes(group.id)}
-							<button type="button" class="grant" class:is-granted={granted} onclick={() => setAccess(selected, 'group', group.id, !granted)}>
-								<span>{group.name}</span><strong>{granted ? 'حذف' : 'افزودن'}</strong>
+							{@const isPending = accessPendingKey === `group-${group.id}`}
+							<button type="button" class="grant" class:is-granted={granted} onclick={() => setAccess(selected, 'group', group.id, !granted)} disabled={isPending || accessPendingKey !== null}>
+								<span>{group.name}</span>
+								<strong>{isPending ? '...' : granted ? 'حذف' : 'افزودن'}</strong>
 							</button>
 						{:else}
 							<p>گروهی تعریف نشده است.</p>
@@ -347,8 +256,10 @@
 						<div class="va-section-label">فروشندگان مستقیم</div>
 						{#each directResellers as reseller (reseller.id)}
 							{@const granted = selected.resellerAccessIds.includes(reseller.id)}
-							<button type="button" class="grant" class:is-granted={granted} onclick={() => setAccess(selected, 'reseller', reseller.id, !granted)}>
-								<span>{reseller.username}</span><strong>{granted ? 'حذف' : 'افزودن'}</strong>
+							{@const isPending = accessPendingKey === `reseller-${reseller.id}`}
+							<button type="button" class="grant" class:is-granted={granted} onclick={() => setAccess(selected, 'reseller', reseller.id, !granted)} disabled={isPending || accessPendingKey !== null}>
+								<span>{reseller.username}</span>
+								<strong>{isPending ? '...' : granted ? 'حذف' : 'افزودن'}</strong>
 							</button>
 						{:else}
 							<p>فروشنده مستقیمی ثبت نشده است.</p>
@@ -377,176 +288,8 @@
 	</form>
 </Modal>
 
-<!-- ── Create VPN plan modal ──────────────────────────────────────────────── -->
-<Modal open={createPlanOpen} title="پلن VPN جدید" eyebrow="پلن‌های فروشندگان" onClose={() => (createPlanOpen = false)}>
-	<form {...createPlan.enhance(async ({ submit }) => {
-		await submit();
-		if (createPlan.result?.planSuccess) { toast.success(createPlan.result.planSuccess); createPlanOpen = false; }
-		if (createPlan.result?.planError) toast.error(createPlan.result.planError);
-	})} class="panel-form">
-		<div class="field-grid">
-			<div class="va-field-shell"><input type="number" name="quotaGb" min="1" placeholder="مثلاً 50" /><span class="va-field-suffix">GB</span></div>
-			<div class="va-field-shell"><input type="number" name="durationDays" min="1" placeholder="مثلاً 30" /><span class="va-field-suffix">روز</span></div>
-		</div>
-		<div class="va-field-shell"><input type="text" inputmode="numeric" name="priceToman" placeholder="5,000,000" oninput={formatCurrencyInput} /><span class="va-field-suffix">تومان</span></div>
-		<label class="select-field">
-			<span>سرور (inbound)</span>
-			<select class="admin-field" name="inboundId">
-				{#each data.inboundOptions as opt (opt.id)}
-					<option value={opt.id}>{opt.remark ?? `inbound #${opt.id}`}</option>
-				{/each}
-			</select>
-		</label>
-		<button type="submit" class="admin-btn admin-btn-primary full" disabled={createPlan.pending > 0}>
-			<AnimatedIcon name="check" size={13} />
-			<span>{createPlan.pending > 0 ? 'در حال ساخت...' : 'ساخت پلن'}</span>
-		</button>
-	</form>
-</Modal>
-
-<!-- ── VPN plan detail modal ──────────────────────────────────────────────── -->
-{#if selectedPlan}
-	{@const plan = selectedPlan}
-	<Modal open={planDetailOpen} title={`پلن ${plan.quotaGb} GB / ${plan.durationDays} روز`} eyebrow="جزئیات پلن VPN" onClose={() => (planDetailOpen = false)}>
-		{@const editPlanForm = updatePlan.for(plan.id)}
-		{@const togglePlanForm = togglePlan.for(plan.id)}
-		{@const pubForm = togglePlanPublic.for(plan.id)}
-		<div class="plan-detail">
-
-			<!-- edit form -->
-			<form {...editPlanForm.enhance(async ({ submit }) => {
-				await submit();
-				if (editPlanForm.result?.planUpdateSuccess) toast.success(editPlanForm.result.planUpdateSuccess);
-				if (editPlanForm.result?.planUpdateError) toast.error(editPlanForm.result.planUpdateError);
-			})} class="panel-form">
-				<input type="hidden" name="id" value={plan.id} />
-				<div class="va-section-label">ویرایش پلن</div>
-				<div class="field-grid">
-					<div class="va-field-shell"><input type="number" name="quotaGb" min="1" value={plan.quotaGb} /><span class="va-field-suffix">GB</span></div>
-					<div class="va-field-shell"><input type="number" name="durationDays" min="1" value={plan.durationDays} /><span class="va-field-suffix">روز</span></div>
-				</div>
-				<div class="va-field-shell"><input type="text" inputmode="numeric" name="priceToman" value={currencyValue(plan.priceToman)} oninput={formatCurrencyInput} /><span class="va-field-suffix">تومان</span></div>
-				<label class="select-field">
-					<span>سرور</span>
-					<select class="admin-field" name="inboundId">
-						{#each data.inboundOptions as opt (opt.id)}
-							<option value={opt.id} selected={opt.id === plan.inboundId}>{opt.remark ?? `inbound #${opt.id}`}</option>
-						{/each}
-					</select>
-				</label>
-				<button type="submit" class="admin-btn admin-btn-ghost full" disabled={editPlanForm.pending > 0}>
-					{editPlanForm.pending > 0 ? 'در حال ذخیره...' : 'ذخیره پلن'}
-				</button>
-			</form>
-
-			<!-- active toggle -->
-			<form {...togglePlanForm.enhance(async ({ submit }) => {
-				await submit();
-				if (togglePlanForm.result?.planToggleSuccess) toast.success(togglePlanForm.result.planToggleSuccess);
-				if (togglePlanForm.result?.planToggleError) toast.error(togglePlanForm.result.planToggleError);
-			})} class="action-form">
-				<input type="hidden" name="id" value={plan.id} />
-				<input type="hidden" name="enabled" value={plan.isActive ? 'false' : 'true'} />
-				<button type="submit" class="admin-btn admin-btn-ghost full">
-					<AnimatedIcon name={plan.isActive ? 'toggle' : 'check'} size={13} />
-					<span>{plan.isActive ? 'غیرفعال کردن پلن' : 'فعال کردن پلن'}</span>
-				</button>
-			</form>
-
-			<!-- public/private toggle -->
-			<div class="access-panel">
-				<div class="va-section-label">دسترسی پلن</div>
-				<form {...pubForm.enhance(async ({ submit }) => {
-					await submit();
-					if (pubForm.result?.planSuccess) toast.success(pubForm.result.planSuccess);
-					if (pubForm.result?.planError) toast.error(pubForm.result.planError);
-				})} class="inline-form">
-					<input type="hidden" name="id" value={plan.id} />
-					<input type="hidden" name="isPublic" value={plan.isPublic ? 'false' : 'true'} />
-					<button type="submit" class="admin-btn admin-btn-ghost full">
-						<AnimatedIcon name="toggle" size={13} />
-						<span>{plan.isPublic ? 'تبدیل به خصوصی' : 'تبدیل به عمومی'}</span>
-					</button>
-				</form>
-
-				{#if !plan.isPublic}
-					<p class="hint">پلن خصوصی فقط برای فروشندگان یا گروه‌های مشخص نمایش داده می‌شود.</p>
-
-					<!-- current access list -->
-					{#if planAccessForSelected.length > 0}
-						<div class="va-section-label">دسترسی فعلی</div>
-						{#each planAccessForSelected as entry, i}
-							{@const label = entry.resellerId
-								? (data.resellerAccounts.find((r) => r.id === entry.resellerId)?.username ?? `#${entry.resellerId}`)
-								: (data.resellerGroups.find((g) => g.id === entry.groupId)?.name ?? `گروه #${entry.groupId}`)}
-							{@const kind = entry.resellerId ? 'فروشنده' : 'گروه'}
-							{@const revokeForm = revokePlanAccess.for(i + 1)}
-							<form {...revokeForm.enhance(async ({ submit }) => {
-								await submit();
-								if (revokeForm.result?.planSuccess) toast.success(revokeForm.result.planSuccess);
-								if (revokeForm.result?.planError) toast.error(revokeForm.result.planError);
-							})} class="revoke-row">
-								<input type="hidden" name="planId" value={plan.id} />
-								{#if entry.resellerId}<input type="hidden" name="resellerId" value={entry.resellerId} />{/if}
-								{#if entry.groupId}<input type="hidden" name="groupId" value={entry.groupId} />{/if}
-								<div class="revoke-label">
-									<span class="kind-tag">{kind}</span>
-									<span>{label}</span>
-								</div>
-								<button type="submit" class="admin-btn danger-sm">لغو</button>
-							</form>
-						{/each}
-					{/if}
-
-					<!-- grant access -->
-					{@const grantGroupForm = grantPlanAccess.for(plan.id)}
-					{@const grantResellerForm = grantPlanAccess.for(plan.id + 1000000)}
-					<div class="va-section-label">افزودن دسترسی</div>
-					{#each data.resellerGroups as group (group.id)}
-						{@const already = planAccessForSelected.some((e) => e.groupId === group.id)}
-						{#if !already}
-							<form {...grantGroupForm.enhance(async ({ submit }) => {
-								await submit();
-								if (grantGroupForm.result?.planSuccess) toast.success(grantGroupForm.result.planSuccess);
-								if (grantGroupForm.result?.planError) toast.error(grantGroupForm.result.planError);
-							})} class="grant-form">
-								<input type="hidden" name="planId" value={plan.id} />
-								<input type="hidden" name="groupId" value={group.id} />
-								<button type="submit" class="grant">
-									<span>{group.name} <em class="kind-tag">گروه</em></span>
-									<strong>افزودن</strong>
-								</button>
-							</form>
-						{/if}
-					{/each}
-					{#each directResellers as reseller (reseller.id)}
-						{@const already = planAccessForSelected.some((e) => e.resellerId === reseller.id)}
-						{#if !already}
-							<form {...grantResellerForm.enhance(async ({ submit }) => {
-								await submit();
-								if (grantResellerForm.result?.planSuccess) toast.success(grantResellerForm.result.planSuccess);
-								if (grantResellerForm.result?.planError) toast.error(grantResellerForm.result.planError);
-							})} class="grant-form">
-								<input type="hidden" name="planId" value={plan.id} />
-								<input type="hidden" name="resellerId" value={reseller.id} />
-								<button type="submit" class="grant">
-									<span>{reseller.username} <em class="kind-tag">فروشنده</em></span>
-									<strong>افزودن</strong>
-								</button>
-							</form>
-						{/if}
-					{/each}
-					{#if data.resellerGroups.length === 0 && directResellers.length === 0}
-						<p class="hint">هیچ گروه یا فروشنده مستقیمی تعریف نشده است.</p>
-					{/if}
-				{/if}
-			</div>
-		</div>
-	</Modal>
-{/if}
-
 <style>
-	.packages-panel, .plans-panel { overflow: hidden; padding: 0; }
+	.packages-panel { overflow: hidden; padding: 0; }
 	.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; border-bottom: 1px solid var(--va-border); }
 	.panel-title { color: var(--va-text); font-size: 14px; font-weight: 800; }
 	.panel-sub, .access-panel p, .hint { margin: 4px 0 0; color: var(--va-text-faint); font-size: 11px; line-height: 1.7; }
@@ -563,21 +306,21 @@
 	.action-form, .inline-form { margin-top: 10px; }
 	.access-panel { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--va-border); }
 	.grant { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 8px 10px; border: 1px solid var(--va-border); border-radius: 7px; background: var(--va-bg-raised); color: var(--va-text); font: 500 12px var(--va-font-fa); cursor: pointer; }
+	.grant:disabled { opacity: 0.5; cursor: not-allowed; }
 	.grant.is-granted { border-color: color-mix(in srgb, var(--va-accent) 44%, var(--va-border)); background: var(--va-accent-soft); }
 	.grant strong { color: var(--va-accent); font-size: 11px; }
 	.grant.is-granted strong { color: var(--va-danger); }
 	.select-field { display: grid; gap: 5px; color: var(--va-text-muted); font-size: 11px; }
-	/* VPN plans */
-	.plan-head-badges { display: flex; align-items: center; gap: 8px; }
-	.plan-remark { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--va-text-muted); font-size: 11px; }
-	.plan-detail-btn { padding: 4px 8px; font-size: 11px; }
-	/* Plan detail modal */
-	.plan-detail { display: grid; gap: 0; }
-	.revoke-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--va-border); }
-	.revoke-label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--va-text); }
-	.kind-tag { display: inline-block; border-radius: 4px; padding: 1px 5px; background: color-mix(in srgb, var(--va-accent) 14%, transparent); color: var(--va-accent); font-size: 10px; font-style: normal; }
-	.grant-form { margin: 0; }
-	.grant-form .grant { border-radius: 6px; }
-	.danger-sm { padding: 3px 8px; border: 1px solid color-mix(in srgb, var(--va-danger) 30%, var(--va-border)); border-radius: 5px; background: transparent; color: var(--va-danger); font-size: 11px; cursor: pointer; }
+	.btn-spinner {
+		display: inline-block;
+		width: 12px;
+		height: 12px;
+		border-radius: 50%;
+		border: 2px solid currentColor;
+		border-top-color: transparent;
+		animation: spin 0.6s linear infinite;
+		flex-shrink: 0;
+	}
+	@keyframes spin { to { transform: rotate(360deg); } }
 	@media (max-width: 620px) { .field-grid { grid-template-columns: 1fr; } }
 </style>

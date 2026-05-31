@@ -102,44 +102,6 @@
 			</div>
 		</div>
 
-		<div class="va-card security-panel">
-			<div class="panel-head">
-				<div>
-					<div class="panel-title">محدودسازی دسترسی</div>
-					<div class="panel-sub">قوانین امنیتی فعال در سمت سرور</div>
-				</div>
-			</div>
-			<div class="toggle-list">
-				<div class="toggle-row">
-					<div>
-						<div>Rate limit ورود</div>
-						<span>محدودیت تلاش ناموفق برای مدیر و فروشنده</span>
-					</div>
-					<span class="mini-switch is-on"><i></i></span>
-				</div>
-				<div class="toggle-row">
-					<div>
-						<div>مسیر مخفی پنل‌ها</div>
-						<span>{hasHiddenPaths ? 'هر دو مسیر تنظیم شده‌اند' : 'نیازمند تنظیم'}</span>
-					</div>
-					<span class="mini-switch" class:is-on={hasHiddenPaths}><i></i></span>
-				</div>
-				<div class="toggle-row">
-					<div>
-						<div>نشست جداگانه فروشنده</div>
-						<span>کوکی فروشنده از مدیر جداست</span>
-					</div>
-					<span class="mini-switch is-on"><i></i></span>
-				</div>
-				<div class="toggle-row">
-					<div>
-						<div>لیست سفید IP مدیریت</div>
-						<span>در نسخه فعلی فعال نیست</span>
-					</div>
-					<span class="mini-switch"><i></i></span>
-				</div>
-			</div>
-		</div>
 	</div>
 
 	<div class="va-card login-log">

@@ -404,10 +404,12 @@
 	let hardDeleteConfirmOpen = $state(false);
 	let hardDeleteConfirmUsername = $state('');
 	let hardDeleteConfirmResolve: ((v: boolean) => void) | null = null;
+	let hardDeleteUsernameInput = $state('');
 
 	function awaitHardDeleteConfirm(username: string): Promise<boolean> {
 		return new Promise((resolve) => {
 			hardDeleteConfirmUsername = username;
+			hardDeleteUsernameInput = '';
 			hardDeleteConfirmOpen = true;
 			hardDeleteConfirmResolve = resolve;
 		});
@@ -416,6 +418,7 @@
 		hardDeleteConfirmOpen = false;
 		hardDeleteConfirmResolve?.(confirmed);
 		hardDeleteConfirmResolve = null;
+		hardDeleteUsernameInput = '';
 	}
 
 	async function handleInboundAccess(
@@ -687,48 +690,26 @@
 			</div>
 		{/if}
 
-{#snippet resellerInspector()}
-	<aside class="va-inspector">
-		{#if selected}
-			{@const toggleForm = toggleReseller.for(selected.id)}
-			{@const deleteForm = deleteReseller.for(selected.id)}
-			{@const allConfigsDisableForm = toggleAllResellerConfigs.for(selected.id * 2)}
-			{@const allConfigsEnableForm = toggleAllResellerConfigs.for(selected.id * 2 + 1)}
-			{@const inboundForm = updateResellerInbounds.for(selected.id)}
-			{@const subPermForm = toggleResellerSubPermission.for(selected.id)}
-			{@const subLimitForm = updateResellerSubLimit.for(selected.id)}
-			{@const hardDeleteForm = hardDeleteReseller.for(selected.id)}
+{#snippet resellerInspectorBody()}
+	{#if selected}
+		{@const toggleForm = toggleReseller.for(selected.id)}
+		{@const deleteForm = deleteReseller.for(selected.id)}
+		{@const allConfigsDisableForm = toggleAllResellerConfigs.for(selected.id * 2)}
+		{@const allConfigsEnableForm = toggleAllResellerConfigs.for(selected.id * 2 + 1)}
+		{@const inboundForm = updateResellerInbounds.for(selected.id)}
+		{@const subPermForm = toggleResellerSubPermission.for(selected.id)}
+		{@const subLimitForm = updateResellerSubLimit.for(selected.id)}
+		{@const hardDeleteForm = hardDeleteReseller.for(selected.id)}
 
-			<div class="va-inspector-head">
-				<VaAvatar name={selected.username} size={28} />
-				<div class="inspector-title-block">
-					<p class="va-inspector-title title-with-role">
-						{selected.username}
-						{#if selected.parentResellerId !== null}
-							<span class="reseller-role-badge">زیرفروشنده</span>
-						{/if}
-						{#if selected.groupName}
-							<span class="group-badge" style="--gc: {selected.groupColor ?? '#6366f1'}">
-								<span class="group-dot"></span>{selected.groupName}
-							</span>
-						{/if}
-					</p>
-					{#if selected.parentResellerId !== null}
-						<p class="inspector-parent">متعلق به {parentUsername(selected)} <span dir="ltr">#{selected.parentResellerId}</span></p>
-					{/if}
-					<p class="va-inspector-sub">ID #{selected.id} · {formatDate(selected.createdAt)}</p>
-				</div>
-			</div>
+		<div class="va-inspector-tabs">
+			<button type="button" class="va-inspector-tab" class:is-active={selectedTab === 'overview'} onclick={() => (selectedTab = 'overview')}>نمای کلی</button>
+			<button type="button" class="va-inspector-tab" class:is-active={selectedTab === 'payments'} onclick={() => (selectedTab = 'payments')}>شارژها</button>
+			<button type="button" class="va-inspector-tab" class:is-active={selectedTab === 'configs'} onclick={() => (selectedTab = 'configs')}>کانفیگ‌ها</button>
+			<button type="button" class="va-inspector-tab" class:is-active={selectedTab === 'settings'} onclick={() => (selectedTab = 'settings')}>تنظیمات</button>
+		</div>
 
-			<div class="va-inspector-tabs">
-				<button type="button" class="va-inspector-tab" class:is-active={selectedTab === 'overview'} onclick={() => (selectedTab = 'overview')}>نمای کلی</button>
-				<button type="button" class="va-inspector-tab" class:is-active={selectedTab === 'payments'} onclick={() => (selectedTab = 'payments')}>شارژها</button>
-				<button type="button" class="va-inspector-tab" class:is-active={selectedTab === 'configs'} onclick={() => (selectedTab = 'configs')}>کانفیگ‌ها</button>
-				<button type="button" class="va-inspector-tab" class:is-active={selectedTab === 'settings'} onclick={() => (selectedTab = 'settings')}>تنظیمات</button>
-			</div>
-
-			<div class="va-inspector-body">
-				{#if selectedTab === 'payments'}
+		<div class="va-inspector-body">
+			{#if selectedTab === 'payments'}
 					<div class="tab-panel-card">
 						<div class="va-section-label">درخواست‌های شارژ GB</div>
 						{#if selected.creditRequests.length === 0}
@@ -982,7 +963,7 @@
 						})}>
 							<input type="hidden" name="id" value={selected.id} />
 							<button
-								type="button"
+								type="submit"
 								class="va-action-row danger hard-delete-btn"
 								disabled={hardDeleteForm.pending > 0}
 							>
@@ -995,6 +976,33 @@
 				</div>
 				{/if}
 			</div>
+	{/if}
+{/snippet}
+
+{#snippet resellerInspector()}
+	<aside class="va-inspector">
+		{#if selected}
+			<div class="va-inspector-head">
+				<VaAvatar name={selected.username} size={28} />
+				<div class="inspector-title-block">
+					<p class="va-inspector-title title-with-role">
+						{selected.username}
+						{#if selected.parentResellerId !== null}
+							<span class="reseller-role-badge">زیرفروشنده</span>
+						{/if}
+						{#if selected.groupName}
+							<span class="group-badge" style="--gc: {selected.groupColor ?? '#6366f1'}">
+								<span class="group-dot"></span>{selected.groupName}
+							</span>
+						{/if}
+					</p>
+					{#if selected.parentResellerId !== null}
+						<p class="inspector-parent">متعلق به {parentUsername(selected)} <span dir="ltr">#{selected.parentResellerId}</span></p>
+					{/if}
+					<p class="va-inspector-sub">ID #{selected.id} · {formatDate(selected.createdAt)}</p>
+				</div>
+			</div>
+			{@render resellerInspectorBody()}
 		{:else}
 			<div class="va-inspector-body">
 				<EmptyState
@@ -1041,42 +1049,10 @@
 	</div>
 {/if}
 
-<Modal open={mobileDetailsOpen && selected !== null} title={selectedTitle} eyebrow="جزئیات فروشنده" onClose={() => (mobileDetailsOpen = false)}>
-	{#if selected}
-		<div class="mobile-details-stack">
-			<div class="inspector-status-row">
-				<div>
-					<div class="va-section-label">وضعیت</div>
-					<VaStatusDot tone={selected.isActive ? 'success' : 'muted'} label={selected.isActive ? 'فعال' : 'غیرفعال'} />
-				</div>
-				<span class="reseller-meta">ID #{selected.id}</span>
-			</div>
-			<div class="inspector-mini-grid">
-				<div>
-					<span>موجودی</span>
-					<strong>{selected.stats.gbBalance.toLocaleString('fa-IR-u-nu-latn')} GB</strong>
-				</div>
-				<div>
-					<span>مصرف‌شده</span>
-					<strong>{selected.stats.totalGbSold.toLocaleString('fa-IR-u-nu-latn')} GB</strong>
-				</div>
-				<div>
-					<span>شارژ شده</span>
-					<strong class="success">{selected.stats.totalGbAdded.toLocaleString('fa-IR-u-nu-latn')} GB</strong>
-				</div>
-				<div>
-					<span>برگشتی</span>
-					<strong>{selected.stats.totalGbRefunded.toLocaleString('fa-IR-u-nu-latn')} GB</strong>
-				</div>
-			</div>
-			<div class="tab-panel-card">
-				<div class="va-section-label">کانفیگ‌ها</div>
-				<div class="mini-row"><span>کل کانفیگ‌ها</span><strong>{selected.stats.totalRequests.toLocaleString('fa-IR-u-nu-latn')}</strong></div>
-				<div class="mini-row"><span>فعال</span><strong>{selected.stats.activeRequests.toLocaleString('fa-IR-u-nu-latn')}</strong></div>
-				<div class="mini-row"><span>قابل حذف</span><strong>{selected.canDelete ? 'بله' : selected.deleteBlockedReason ?? 'خیر'}</strong></div>
-			</div>
-		</div>
-	{/if}
+<Modal open={mobileDetailsOpen && selected !== null} title={selectedTitle} eyebrow="جزئیات فروشنده" onClose={() => (mobileDetailsOpen = false)} size="lg">
+	<div class="mobile-inspector-wrap">
+		{@render resellerInspectorBody()}
+	</div>
 </Modal>
 
 {#if resetTarget}
@@ -1233,12 +1209,26 @@
 	open={hardDeleteConfirmOpen}
 	title="حذف کامل فروشنده"
 	description="حساب «{hardDeleteConfirmUsername}»، تمام کانفیگ‌های فعال در x-ui و تمام سوابق مالی برای همیشه پاک می‌شوند. این عملیات غیرقابل بازگشت است."
-	confirmLabel="حذف کامل"
+	confirmLabel="بله، برای همیشه حذف کن"
 	cancelLabel="انصراف"
 	intent="danger"
+	confirmDisabled={hardDeleteUsernameInput !== hardDeleteConfirmUsername}
 	onConfirm={() => resolveHardDelete(true)}
 	onClose={() => resolveHardDelete(false)}
-/>
+>
+	<div class="hd-username-verify">
+		<label for="hd-confirm-input">نام کاربری فروشنده را برای تأیید وارد کنید:</label>
+		<input
+			id="hd-confirm-input"
+			type="text"
+			class="admin-field hd-confirm-field"
+			placeholder={hardDeleteConfirmUsername}
+			bind:value={hardDeleteUsernameInput}
+			autocomplete="off"
+			dir="ltr"
+		/>
+	</div>
+</ConfirmDialog>
 
 <style>
 	.toolbar-spacer {
@@ -1856,5 +1846,40 @@
 		color: var(--va-text);
 		font: 500 11.5px var(--va-font-fa);
 		cursor: pointer;
+	}
+
+	/* ── Hard delete username verification ──────────────────────────────── */
+
+	.hd-username-verify {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.hd-username-verify label {
+		font-size: 12px;
+		color: var(--va-text-muted);
+	}
+
+	.hd-confirm-field {
+		width: 100%;
+		padding: 8px 10px;
+		font-size: 13px;
+		font-family: var(--va-font-mono);
+		text-align: left;
+	}
+
+	/* ── Mobile inspector inside modal ──────────────────────────────────── */
+
+	.mobile-inspector-wrap :global(.va-inspector-body) {
+		overflow-y: visible;
+		flex: none;
+		min-height: auto;
+		padding: 0;
+	}
+
+	.mobile-inspector-wrap :global(.va-inspector-tabs) {
+		padding: 0;
+		margin-bottom: 12px;
 	}
 </style>
