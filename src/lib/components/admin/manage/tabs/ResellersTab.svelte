@@ -22,6 +22,8 @@
 		toggleAllResellerConfigs,
 		toggleReseller,
 		toggleResellerSubPermission,
+		toggleTelegramBotPermission,
+		forceDisconnectTelegramBot,
 		updateResellerInbounds,
 		updateResellerSubLimit,
 		revokeManagedResellerSession,
@@ -91,6 +93,14 @@
 		groupName: string | null;
 		groupColor: string | null;
 		groupBadgeIcon: string | null;
+		telegramBotAllowed: boolean;
+		telegramBot: {
+			id: number;
+			username: string;
+			displayName: string;
+			status: string;
+			lastError: string;
+		} | null;
 		stats: ResellerStats;
 		payments: Array<{ id: number; amountToman: number; createdAt: number }>;
 		creditRequests: ResellerCreditRequest[];
@@ -699,6 +709,8 @@
 		{@const inboundForm = updateResellerInbounds.for(selected.id)}
 		{@const subPermForm = toggleResellerSubPermission.for(selected.id)}
 		{@const subLimitForm = updateResellerSubLimit.for(selected.id)}
+		{@const telegramPermForm = toggleTelegramBotPermission.for(selected.id)}
+		{@const telegramDisconnectForm = forceDisconnectTelegramBot.for(selected.id)}
 		{@const hardDeleteForm = hardDeleteReseller.for(selected.id)}
 
 		<div class="va-inspector-tabs">
@@ -788,6 +800,50 @@
 								</div>
 								<p>مقدار صفر ساخت زیرفروشنده جدید را متوقف می‌کند.</p>
 							</form>
+							<div class="mini-row settings-perm-row">
+								<span>مجوز بات تلگرام</span>
+								<form
+									{...telegramPermForm.enhance(async ({ submit }) => {
+										await submit();
+										const result = telegramPermForm.result;
+										if (result?.telegramBotPermissionSuccess) toast.success(result.telegramBotPermissionSuccess);
+										if (result?.telegramBotPermissionError) toast.error(result.telegramBotPermissionError);
+									})}
+									class="perm-toggle-form"
+								>
+									<input type="hidden" name="resellerId" value={selected.id} />
+									<input type="hidden" name="enabled" value={selected.telegramBotAllowed ? 'false' : 'true'} />
+									<button
+										type="submit"
+										class="va-switch"
+										class:is-on={selected.telegramBotAllowed}
+										aria-label={selected.telegramBotAllowed ? 'غیرفعال کردن بات تلگرام' : 'فعال کردن بات تلگرام'}
+									><span></span></button>
+								</form>
+							</div>
+							<div class="telegram-manager-card">
+								<div class="va-section-label">بات متصل</div>
+								{#if selected.telegramBot}
+									<div class="mini-row"><span>نام بات</span><strong dir="ltr">@{selected.telegramBot.username}</strong></div>
+									<div class="mini-row"><span>وضعیت</span><strong>{selected.telegramBot.status}</strong></div>
+									{#if selected.telegramBot.lastError}
+										<div class="mini-row"><span>خطا</span><strong>{selected.telegramBot.lastError}</strong></div>
+									{/if}
+									<form
+										{...telegramDisconnectForm.enhance(async ({ submit }) => {
+											await submit();
+											const result = telegramDisconnectForm.result;
+											if (result?.telegramBotPermissionSuccess) toast.success(result.telegramBotPermissionSuccess);
+											if (result?.telegramBotPermissionError) toast.error(result.telegramBotPermissionError);
+										})}
+									>
+										<input type="hidden" name="resellerId" value={selected.id} />
+										<button type="submit" class="admin-btn admin-btn-danger">قطع اجباری بات</button>
+									</form>
+								{:else}
+									<div class="field-hint">باتی برای این فروشنده وصل نشده است.</div>
+								{/if}
+							</div>
 						{/if}
 						<div class="va-section-label">گروه‌بندی</div>
 						<div class="mini-row group-assign-mini">
@@ -1404,6 +1460,12 @@
 
 	.settings-perm-row {
 		align-items: center;
+	}
+
+	.telegram-manager-card {
+		margin-top: 10px;
+		padding-top: 10px;
+		border-top: 1px solid var(--va-border);
 	}
 
 	.session-admin-row span {

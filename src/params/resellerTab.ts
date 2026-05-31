@@ -4,6 +4,7 @@ export const resellerTabIds = [
 	'overview',
 	'create',
 	'configs',
+	'telegram',
 	'tickets',
 	'message',
 	'finance',

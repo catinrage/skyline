@@ -78,6 +78,8 @@ import {
 	removeResellerPlanAccess,
 	getAllResellerPlanAccess,
 	setResellerClientTicketsEnabled,
+	setResellerTelegramBotAllowed,
+	disconnectResellerTelegramBot,
 	deleteResellerTicketAsManager,
 	managerRenewConfig,
 	managerToggleConfig,
@@ -108,7 +110,26 @@ const featureSettingsSchema = z
 			.min(1, 'فاصله ارسال گزارش باید حداقل ۱ دقیقه باشد.')
 			.max(1440, 'فاصله ارسال گزارش نمی‌تواند بیشتر از ۱۴۴۰ دقیقه باشد.'),
 		latencyTestTargetUrl: z.string().trim().url('آدرس تست تاخیر باید یک URL معتبر باشد.'),
-		speedTestTargetUrl: z.string().trim().url('آدرس تست سرعت باید یک URL معتبر باشد.')
+		speedTestTargetUrl: z.string().trim().url('آدرس تست سرعت باید یک URL معتبر باشد.'),
+		telegramBotSocksProxyUrl: z.string().trim().max(300, 'آدرس پراکسی بیش از حد طولانی است.'),
+		telegramBotMaxCustomQuotaGb: z.coerce
+			.number()
+			.min(1, 'سقف حجم باید حداقل ۱ گیگ باشد.')
+			.max(10000, 'سقف حجم بیش از حد بزرگ است.'),
+		telegramBotMaxCustomDurationDays: z.coerce
+			.number()
+			.int()
+			.min(1, 'سقف مدت باید حداقل ۱ روز باشد.')
+			.max(3650, 'سقف مدت بیش از حد بزرگ است.'),
+		telegramBotMinCustomPriceToman: z.coerce
+			.number()
+			.int()
+			.min(0, 'حداقل قیمت نمی‌تواند منفی باشد.'),
+		telegramBotDraftExpiryMinutes: z.coerce
+			.number()
+			.int()
+			.min(5, 'انقضای سفارش باید حداقل ۵ دقیقه باشد.')
+			.max(10080, 'انقضای سفارش نمی‌تواند بیشتر از ۷ روز باشد.')
 	})
 	.refine(
 		(settings) => ['http:', 'https:'].includes(new URL(settings.latencyTestTargetUrl).protocol),
@@ -235,7 +256,12 @@ async function buildManageState(authenticated: boolean) {
 			featureSettings: {
 				configIssueReportCooldownMinutes: 1,
 				latencyTestTargetUrl: 'https://www.gstatic.com/generate_204',
-				speedTestTargetUrl: 'http://ipv4.download.thinkbroadband.com/20MB.zip'
+				speedTestTargetUrl: 'http://ipv4.download.thinkbroadband.com/20MB.zip',
+				telegramBotSocksProxyUrl: '',
+				telegramBotMaxCustomQuotaGb: 100,
+				telegramBotMaxCustomDurationDays: 365,
+				telegramBotMinCustomPriceToman: 0,
+				telegramBotDraftExpiryMinutes: 60
 			},
 			configIssueReports: [],
 			resellerTickets: [],
@@ -1826,6 +1852,48 @@ export const toggleClientTickets = form(
 		} catch (error) {
 			return {
 				clientTicketsError: error instanceof Error ? error.message : 'تغییر وضعیت انجام نشد.'
+			};
+		}
+	}
+);
+
+export const toggleTelegramBotPermission = form(
+	z.object({
+		resellerId: z.coerce.number().int().positive(),
+		enabled: z.enum(['true', 'false'])
+	}),
+	async ({ resellerId, enabled }) => {
+		const cookies = await requireAdminSession();
+		if (!cookies) return { telegramBotPermissionError: 'نشست منقضی شده است.' };
+		try {
+			await setResellerTelegramBotAllowed(resellerId, enabled === 'true');
+			await getManageState().set(await buildManageState(true));
+			return {
+				telegramBotPermissionSuccess:
+					enabled === 'true' ? 'مجوز بات تلگرام فعال شد.' : 'مجوز بات تلگرام غیرفعال شد.'
+			};
+		} catch (error) {
+			return {
+				telegramBotPermissionError:
+					error instanceof Error ? error.message : 'تغییر مجوز بات انجام نشد.'
+			};
+		}
+	}
+);
+
+export const forceDisconnectTelegramBot = form(
+	z.object({ resellerId: z.coerce.number().int().positive() }),
+	async ({ resellerId }) => {
+		const cookies = await requireAdminSession();
+		if (!cookies) return { telegramBotPermissionError: 'نشست منقضی شده است.' };
+		try {
+			await disconnectResellerTelegramBot(resellerId);
+			await getManageState().set(await buildManageState(true));
+			return { telegramBotPermissionSuccess: 'بات فروشنده قطع شد.' };
+		} catch (error) {
+			return {
+				telegramBotPermissionError:
+					error instanceof Error ? error.message : 'قطع بات انجام نشد.'
 			};
 		}
 	}

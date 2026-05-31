@@ -9,6 +9,7 @@
 	import TicketsTab from '$lib/components/admin/reseller/tabs/TicketsTab.svelte';
 	import MessageTab from '$lib/components/admin/reseller/tabs/MessageTab.svelte';
 	import SecurityTab from '$lib/components/admin/reseller/tabs/SecurityTab.svelte';
+	import TelegramTab from '$lib/components/admin/reseller/tabs/TelegramTab.svelte';
 
 	const resellerState = getContext('resellerState') as ReturnType<
 		typeof import('../../../reseller/page.remote').getResellerState
@@ -23,6 +24,8 @@
 		<CreateConfigTab data={resellerState.current} {resellerState} />
 	{:else if tab === 'configs'}
 		<ConfigsTab data={resellerState.current} {resellerState} />
+	{:else if tab === 'telegram'}
+		<TelegramTab data={resellerState.current} {resellerState} />
 	{:else if tab === 'finance'}
 		<FinanceTab data={resellerState.current} {resellerState} />
 	{:else if tab === 'tickets'}

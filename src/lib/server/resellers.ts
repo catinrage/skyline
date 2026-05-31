@@ -2,7 +2,7 @@ import type { Cookies } from '@sveltejs/kit';
 import type { Row } from '@libsql/client';
 import { createHash, randomBytes } from 'node:crypto';
 import { logger } from '$lib/server/logger';
-import { getResellerPanelMessage, isFeatureEnabled } from '$lib/server/admin';
+import { getFeatureSettings, getResellerPanelMessage, isFeatureEnabled } from '$lib/server/admin';
 import {
 	executeMultiple,
 	getDatabase,
@@ -47,8 +47,21 @@ import type {
 	ClientTicket,
 	ClientTicketMessage,
 	ClientTicketAttachment,
-	ClientTicketSender
+	ClientTicketSender,
+	ResellerTelegramBot,
+	TelegramBotOrder,
+	TelegramBotStatus,
+	TelegramBotOrderStatus
 } from '$lib/types/reseller';
+import {
+	decryptTelegramToken,
+	deleteTelegramWebhook,
+	encryptTelegramToken,
+	getTelegramBotIdentity,
+	hasTelegramTokenSecret,
+	sendTelegramMessage,
+	setTelegramWebhook
+} from '$lib/server/telegram-bot';
 import {
 	createVpnClient,
 	deleteVpnClient,
@@ -84,9 +97,53 @@ type ResellerAccountRow = Row & {
 	sub_reseller_limit: number;
 	group_id: number | null;
 	client_tickets_enabled: number;
+	telegram_bot_allowed: number;
 	is_system_manager: number;
 	created_at: number;
 	updated_at: number;
+};
+
+type ResellerTelegramBotRow = Row & {
+	id: number;
+	reseller_id: number;
+	bot_id: number;
+	username: string;
+	display_name: string;
+	token_encrypted: string;
+	webhook_secret: string;
+	webhook_path_secret: string;
+	status: TelegramBotStatus;
+	webhook_url: string;
+	last_error: string | null;
+	last_update_at: number | null;
+	created_at: number;
+	updated_at: number;
+};
+
+type TelegramBotOrderRow = Row & {
+	id: number;
+	reseller_id: number;
+	bot_id: number;
+	telegram_user_id: number;
+	telegram_username: string | null;
+	customer_name: string;
+	quota_gb: number;
+	duration_days: number;
+	price_toman: number;
+	inbound_id: number;
+	receipt_text: string | null;
+	receipt_file_id: string | null;
+	status: TelegramBotOrderStatus;
+	reseller_note: string | null;
+	customer_note: string | null;
+	xui_request_id: number | null;
+	xui_client_uuid: string | null;
+	config_url: string | null;
+	delivery_error: string | null;
+	created_at: number;
+	updated_at: number;
+	reviewed_at: number | null;
+	delivered_at: number | null;
 };
 
 type ResellerSubPackageRow = Row & {
@@ -559,6 +616,50 @@ function mapConfigTemplateRow(row: ResellerConfigTemplateRow): ResellerConfigTem
 		priceToman: row.price_toman,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at
+	};
+}
+
+function mapTelegramBotRow(row: ResellerTelegramBotRow): ResellerTelegramBot {
+	return {
+		id: row.id,
+		resellerId: row.reseller_id,
+		botId: row.bot_id,
+		username: row.username,
+		displayName: row.display_name,
+		status: row.status,
+		webhookUrl: row.webhook_url,
+		lastError: row.last_error ?? '',
+		lastUpdateAt: row.last_update_at,
+		createdAt: row.created_at,
+		updatedAt: row.updated_at
+	};
+}
+
+function mapTelegramOrderRow(row: TelegramBotOrderRow): TelegramBotOrder {
+	return {
+		id: row.id,
+		resellerId: row.reseller_id,
+		botId: row.bot_id,
+		telegramUserId: row.telegram_user_id,
+		telegramUsername: row.telegram_username ?? '',
+		customerName: row.customer_name,
+		quotaGb: row.quota_gb,
+		durationDays: row.duration_days,
+		priceToman: row.price_toman,
+		inboundId: row.inbound_id,
+		receiptText: row.receipt_text ?? '',
+		receiptFileId: row.receipt_file_id ?? '',
+		status: row.status,
+		resellerNote: row.reseller_note ?? '',
+		customerNote: row.customer_note ?? '',
+		xuiRequestId: row.xui_request_id,
+		xuiClientUuid: row.xui_client_uuid,
+		configUrl: row.config_url,
+		deliveryError: row.delivery_error ?? '',
+		createdAt: row.created_at,
+		updatedAt: row.updated_at,
+		reviewedAt: row.reviewed_at,
+		deliveredAt: row.delivered_at
 	};
 }
 
@@ -1263,6 +1364,49 @@ async function runResellerMigrations() {
 			used_at INTEGER
 		);
 
+		CREATE TABLE IF NOT EXISTS reseller_telegram_bots (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			reseller_id INTEGER NOT NULL UNIQUE,
+			bot_id INTEGER NOT NULL,
+			username TEXT NOT NULL DEFAULT '',
+			display_name TEXT NOT NULL DEFAULT '',
+			token_encrypted TEXT NOT NULL,
+			webhook_secret TEXT NOT NULL,
+			webhook_path_secret TEXT NOT NULL UNIQUE,
+			status TEXT NOT NULL DEFAULT 'active',
+			webhook_url TEXT NOT NULL DEFAULT '',
+			last_error TEXT NOT NULL DEFAULT '',
+			last_update_at INTEGER,
+			created_at INTEGER NOT NULL,
+			updated_at INTEGER NOT NULL
+		);
+
+		CREATE TABLE IF NOT EXISTS telegram_bot_orders (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			reseller_id INTEGER NOT NULL,
+			bot_id INTEGER NOT NULL,
+			telegram_user_id INTEGER NOT NULL,
+			telegram_username TEXT NOT NULL DEFAULT '',
+			customer_name TEXT NOT NULL DEFAULT '',
+			quota_gb REAL NOT NULL,
+			duration_days INTEGER NOT NULL,
+			price_toman INTEGER NOT NULL,
+			inbound_id INTEGER NOT NULL DEFAULT 0,
+			receipt_text TEXT NOT NULL DEFAULT '',
+			receipt_file_id TEXT NOT NULL DEFAULT '',
+			status TEXT NOT NULL DEFAULT 'awaiting_receipt',
+			reseller_note TEXT NOT NULL DEFAULT '',
+			customer_note TEXT NOT NULL DEFAULT '',
+			xui_request_id INTEGER,
+			xui_client_uuid TEXT,
+			config_url TEXT,
+			delivery_error TEXT NOT NULL DEFAULT '',
+			created_at INTEGER NOT NULL,
+			updated_at INTEGER NOT NULL,
+			reviewed_at INTEGER,
+			delivered_at INTEGER
+		);
+
 		CREATE TABLE IF NOT EXISTS reseller_plan_access (
 			plan_id INTEGER NOT NULL,
 			reseller_id INTEGER,
@@ -1318,6 +1462,7 @@ async function runResellerMigrations() {
 	await ensureColumn('reseller_accounts', 'sub_reseller_limit', 'INTEGER NOT NULL DEFAULT 10');
 	await ensureColumn('reseller_accounts', 'group_id', 'INTEGER');
 	await ensureColumn('reseller_accounts', 'client_tickets_enabled', 'INTEGER NOT NULL DEFAULT 0');
+	await ensureColumn('reseller_accounts', 'telegram_bot_allowed', 'INTEGER NOT NULL DEFAULT 0');
 	await ensureColumn('reseller_accounts', 'is_system_manager', 'INTEGER NOT NULL DEFAULT 0');
 	await ensureColumn('reseller_sessions', 'created_at', 'INTEGER NOT NULL DEFAULT 0');
 	await ensureColumn('reseller_sessions', 'last_used_at', 'INTEGER NOT NULL DEFAULT 0');
@@ -1413,6 +1558,7 @@ async function getResellerAccountById(id: number) {
 			COALESCE(sub_reseller_limit, 10) AS sub_reseller_limit,
 			COALESCE(group_id, NULL) AS group_id,
 			COALESCE(client_tickets_enabled, 0) AS client_tickets_enabled,
+			COALESCE(telegram_bot_allowed, 0) AS telegram_bot_allowed,
 			COALESCE(is_system_manager, 0) AS is_system_manager,
 			created_at,
 			updated_at
@@ -1444,6 +1590,7 @@ async function getResellerAccountByUsername(username: string) {
 			COALESCE(sub_reseller_limit, 10) AS sub_reseller_limit,
 			COALESCE(group_id, NULL) AS group_id,
 			COALESCE(client_tickets_enabled, 0) AS client_tickets_enabled,
+			COALESCE(telegram_bot_allowed, 0) AS telegram_bot_allowed,
 			COALESCE(is_system_manager, 0) AS is_system_manager,
 			created_at,
 			updated_at
@@ -2439,6 +2586,73 @@ async function getRequestById(id: number) {
 	return row ? mapRequestRow(row) : null;
 }
 
+async function getTelegramBotRowByResellerId(resellerId: number) {
+	await ensureResellerTables();
+	return queryFirst<ResellerTelegramBotRow>(
+		`SELECT id, reseller_id, bot_id, username, display_name, token_encrypted, webhook_secret,
+		        webhook_path_secret, status, webhook_url, last_error, last_update_at, created_at, updated_at
+		 FROM reseller_telegram_bots WHERE reseller_id = ? LIMIT 1`,
+		[resellerId]
+	);
+}
+
+async function getTelegramBotRowByWebhookSecret(secret: string) {
+	await ensureResellerTables();
+	return queryFirst<ResellerTelegramBotRow>(
+		`SELECT id, reseller_id, bot_id, username, display_name, token_encrypted, webhook_secret,
+		        webhook_path_secret, status, webhook_url, last_error, last_update_at, created_at, updated_at
+		 FROM reseller_telegram_bots WHERE webhook_path_secret = ? LIMIT 1`,
+		[secret]
+	);
+}
+
+async function getTelegramOrderById(id: number) {
+	await ensureResellerTables();
+	const row = await queryFirst<TelegramBotOrderRow>(
+		`SELECT id, reseller_id, bot_id, telegram_user_id, telegram_username, customer_name,
+		        quota_gb, duration_days, price_toman, inbound_id, receipt_text, receipt_file_id,
+		        status, reseller_note, customer_note, xui_request_id, xui_client_uuid, config_url,
+		        delivery_error, created_at, updated_at, reviewed_at, delivered_at
+		 FROM telegram_bot_orders WHERE id = ? LIMIT 1`,
+		[id]
+	);
+	return row ? mapTelegramOrderRow(row) : null;
+}
+
+export async function getResellerTelegramBot(resellerId: number) {
+	const row = await getTelegramBotRowByResellerId(resellerId);
+	return row ? mapTelegramBotRow(row) : null;
+}
+
+export async function getTelegramOrdersByResellerId(resellerId: number) {
+	await ensureResellerTables();
+	const settings = await getFeatureSettings();
+	await run(
+		`UPDATE telegram_bot_orders
+		 SET status = 'expired', updated_at = ?
+		 WHERE reseller_id = ?
+		   AND status = 'awaiting_receipt'
+		   AND created_at <= ?`,
+		[
+			nowSeconds(),
+			resellerId,
+			nowSeconds() - settings.telegramBotDraftExpiryMinutes * 60
+		]
+	);
+	const rows = await queryAll<TelegramBotOrderRow>(
+		`SELECT id, reseller_id, bot_id, telegram_user_id, telegram_username, customer_name,
+		        quota_gb, duration_days, price_toman, inbound_id, receipt_text, receipt_file_id,
+		        status, reseller_note, customer_note, xui_request_id, xui_client_uuid, config_url,
+		        delivery_error, created_at, updated_at, reviewed_at, delivered_at
+		 FROM telegram_bot_orders
+		 WHERE reseller_id = ?
+		 ORDER BY created_at DESC, id DESC
+		 LIMIT 100`,
+		[resellerId]
+	);
+	return rows.map(mapTelegramOrderRow);
+}
+
 async function buildResellerDashboard(
 	account: ResellerAccountRow,
 	origin: string,
@@ -2457,7 +2671,9 @@ async function buildResellerDashboard(
 		charges,
 		tickets,
 		liveUsageMap,
-		managerMessage
+		managerMessage,
+		telegramBot,
+		telegramOrders
 	] = await Promise.all([
 		getResellerPlans({ onlyActive: true }),
 		getResellerPlans(),
@@ -2474,7 +2690,9 @@ async function buildResellerDashboard(
 		getVpnClientUsageMap(fallbackHost, {
 			includeOnlineStatus: true
 		}),
-		getResellerPanelMessage()
+		getResellerPanelMessage(),
+		getResellerTelegramBot(account.id),
+		getTelegramOrdersByResellerId(account.id)
 	]);
 	const availableInbounds = (await getXuiInboundOptions()).filter(
 		(inbound) => inbound.enable && isInboundAllowedForAccount(account, inbound.id)
@@ -2534,6 +2752,7 @@ async function buildResellerDashboard(
 	);
 	const combinedVisiblePlans = [...visiblePublicPlans, ...accessiblePrivatePlans];
 	const sessions = await getResellerSessions(account.id, cookies ?? null);
+	const telegramBotFeatureEnabled = await isFeatureEnabled('telegram_sales_bot');
 
 	return {
 		authenticated: true,
@@ -2550,6 +2769,7 @@ async function buildResellerDashboard(
 			allowedInboundIds: parseAllowedInboundIds(account.allowed_inbound_ids),
 			debtCapToman: account.debt_cap_toman ?? null,
 			clientTicketsEnabled: account.client_tickets_enabled === 1,
+			telegramBotAllowed: account.telegram_bot_allowed === 1,
 			subResellerLimit: account.sub_reseller_limit ?? 10,
 			group: resellerGroup
 		},
@@ -2584,6 +2804,10 @@ async function buildResellerDashboard(
 		subCreditRequests,
 		subResellerTickets: subResellerTickets as SubResellerTicket[],
 		clientTickets: clientTickets as ClientTicket[],
+		telegramBotFeatureEnabled,
+		telegramBotAllowed: !isSubReseller && account.telegram_bot_allowed === 1,
+		telegramBot,
+		telegramOrders,
 		sessions
 	};
 }
@@ -2792,6 +3016,328 @@ export async function getResellerMessageByUsername(username: string) {
 	return account?.custom_message?.trim() || null;
 }
 
+export async function setResellerTelegramBotAllowed(resellerId: number, enabled: boolean) {
+	await ensureResellerTables();
+	const account = await getResellerAccountById(resellerId);
+	if (!account) throw new Error('حساب فروشنده پیدا نشد.');
+	if (account.parent_reseller_id !== null) {
+		throw new Error('بات تلگرام فقط برای فروشندگان اصلی فعال می‌شود.');
+	}
+	const now = nowSeconds();
+	await run('UPDATE reseller_accounts SET telegram_bot_allowed = ?, updated_at = ? WHERE id = ?', [
+		enabled ? 1 : 0,
+		now,
+		resellerId
+	]);
+	if (!enabled) {
+		await run(
+			`UPDATE reseller_telegram_bots SET status = 'disabled', updated_at = ? WHERE reseller_id = ?`,
+			[now, resellerId]
+		);
+	}
+}
+
+export async function connectResellerTelegramBot(
+	resellerId: number,
+	token: string,
+	origin: string
+) {
+	await ensureResellerTables();
+	const account = await getResellerAccountById(resellerId);
+	if (!account || account.is_active !== 1) throw new Error('حساب فروشنده فعال نیست.');
+	if (account.parent_reseller_id !== null) throw new Error('زیرفروشنده نمی‌تواند بات تلگرام وصل کند.');
+	if (account.telegram_bot_allowed !== 1) throw new Error('مجوز بات تلگرام برای این فروشنده فعال نیست.');
+	if (!(await isFeatureEnabled('telegram_sales_bot'))) throw new Error('قابلیت بات تلگرام غیرفعال است.');
+	if (!hasTelegramTokenSecret()) {
+		throw new Error('TELEGRAM_BOT_TOKEN_SECRET باید قبل از اتصال بات تنظیم شود.');
+	}
+
+	const cleanToken = token.trim();
+	if (!/^\d+:[\w-]{20,}$/i.test(cleanToken)) throw new Error('توکن بات تلگرام نامعتبر است.');
+
+	const settings = await getFeatureSettings();
+	const identity = await getTelegramBotIdentity(cleanToken, settings.telegramBotSocksProxyUrl);
+	const pathSecret = crypto.randomUUID().replace(/-/g, '');
+	const webhookSecret = crypto.randomUUID().replace(/-/g, '');
+	const webhookUrl = `${origin.replace(/\/+$/, '')}/api/telegram/${pathSecret}`;
+	await setTelegramWebhook(
+		cleanToken,
+		webhookUrl,
+		webhookSecret,
+		settings.telegramBotSocksProxyUrl
+	);
+
+	const now = nowSeconds();
+	await run(
+		`INSERT INTO reseller_telegram_bots (
+			reseller_id, bot_id, username, display_name, token_encrypted, webhook_secret,
+			webhook_path_secret, status, webhook_url, last_error, last_update_at, created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, '', NULL, ?, ?)
+		ON CONFLICT(reseller_id) DO UPDATE SET
+			bot_id = excluded.bot_id,
+			username = excluded.username,
+			display_name = excluded.display_name,
+			token_encrypted = excluded.token_encrypted,
+			webhook_secret = excluded.webhook_secret,
+			webhook_path_secret = excluded.webhook_path_secret,
+			status = 'active',
+			webhook_url = excluded.webhook_url,
+			last_error = '',
+			updated_at = excluded.updated_at`,
+		[
+			resellerId,
+			identity.id,
+			identity.username,
+			identity.displayName,
+			encryptTelegramToken(cleanToken),
+			webhookSecret,
+			pathSecret,
+			webhookUrl,
+			now,
+			now
+		]
+	);
+
+	return getResellerTelegramBot(resellerId);
+}
+
+export async function pauseResellerTelegramBot(resellerId: number, paused: boolean) {
+	await ensureResellerTables();
+	const now = nowSeconds();
+	await run(
+		`UPDATE reseller_telegram_bots
+		 SET status = ?, updated_at = ?
+		 WHERE reseller_id = ? AND status != 'disabled'`,
+		[paused ? 'paused' : 'active', now, resellerId]
+	);
+}
+
+export async function disconnectResellerTelegramBot(resellerId: number) {
+	await ensureResellerTables();
+	const row = await getTelegramBotRowByResellerId(resellerId);
+	if (!row) return;
+	try {
+		const settings = await getFeatureSettings();
+		await deleteTelegramWebhook(decryptTelegramToken(row.token_encrypted), settings.telegramBotSocksProxyUrl);
+	} catch (error) {
+		resellerLogger.warn('Failed to delete Telegram webhook while disconnecting bot.', {
+			resellerId,
+			error: error instanceof Error ? error : undefined
+		});
+	}
+	await run('DELETE FROM reseller_telegram_bots WHERE reseller_id = ?', [resellerId]);
+}
+
+async function getDefaultTelegramInbound(account: ResellerAccountRow) {
+	const inbound = (await getXuiInboundOptions()).find(
+		(item) => item.enable && isInboundAllowedForAccount(account, item.id)
+	);
+	return inbound?.id ?? 0;
+}
+
+async function assertTelegramOrderLimits(quotaGb: number, durationDays: number, priceToman: number) {
+	const settings = await getFeatureSettings();
+	if (quotaGb <= 0 || quotaGb > settings.telegramBotMaxCustomQuotaGb) {
+		throw new Error(`حجم سفارش باید بین ۱ تا ${settings.telegramBotMaxCustomQuotaGb} گیگ باشد.`);
+	}
+	if (durationDays < 1 || durationDays > settings.telegramBotMaxCustomDurationDays) {
+		throw new Error(`مدت سفارش باید بین ۱ تا ${settings.telegramBotMaxCustomDurationDays} روز باشد.`);
+	}
+	if (priceToman < settings.telegramBotMinCustomPriceToman) {
+		throw new Error('قیمت سفارش از حداقل تعیین‌شده مدیر کمتر است.');
+	}
+}
+
+export async function getTelegramWebhookContext(secret: string, secretToken: string | null) {
+	const bot = await getTelegramBotRowByWebhookSecret(secret);
+	if (!bot || bot.webhook_secret !== secretToken) return null;
+	const account = await getResellerAccountById(bot.reseller_id);
+	if (!account || account.is_active !== 1 || account.telegram_bot_allowed !== 1) return null;
+	if (account.parent_reseller_id !== null) return null;
+	if (!(await isFeatureEnabled('telegram_sales_bot'))) return null;
+	if (bot.status !== 'active') return null;
+	return { bot, account, token: decryptTelegramToken(bot.token_encrypted) };
+}
+
+export async function touchTelegramBotUpdate(botId: number) {
+	await ensureResellerTables();
+	await run(
+		`UPDATE reseller_telegram_bots SET last_update_at = ?, last_error = '', updated_at = ? WHERE id = ?`,
+		[nowSeconds(), nowSeconds(), botId]
+	);
+}
+
+export async function recordTelegramBotError(botId: number, message: string) {
+	await ensureResellerTables();
+	await run(
+		`UPDATE reseller_telegram_bots SET status = 'error', last_error = ?, updated_at = ? WHERE id = ?`,
+		[message.slice(0, 500), nowSeconds(), botId]
+	);
+}
+
+export async function createTelegramBotOrderFromCommand(input: {
+	resellerId: number;
+	botId: number;
+	telegramUserId: number;
+	telegramUsername: string;
+	customerName: string;
+	quotaGb: number;
+	durationDays: number;
+	priceToman: number;
+	customerNote?: string;
+}) {
+	await ensureResellerTables();
+	const account = await getResellerAccountById(input.resellerId);
+	if (!account) throw new Error('فروشنده پیدا نشد.');
+	await assertTelegramOrderLimits(input.quotaGb, input.durationDays, input.priceToman);
+	const inboundId = await getDefaultTelegramInbound(account);
+	if (!inboundId) throw new Error('برای این فروشنده سرور مجاز فعال پیدا نشد.');
+	const now = nowSeconds();
+	await run(
+		`INSERT INTO telegram_bot_orders (
+			reseller_id, bot_id, telegram_user_id, telegram_username, customer_name,
+			quota_gb, duration_days, price_toman, inbound_id, customer_note,
+			status, created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'awaiting_receipt', ?, ?)`,
+		[
+			input.resellerId,
+			input.botId,
+			input.telegramUserId,
+			input.telegramUsername.slice(0, 64),
+			input.customerName.trim().slice(0, 64) || 'مشتری تلگرام',
+			input.quotaGb,
+			input.durationDays,
+			input.priceToman,
+			inboundId,
+			input.customerNote?.trim().slice(0, 500) ?? '',
+			now,
+			now
+		]
+	);
+	const row = await queryFirst<Row & { id: number }>('SELECT last_insert_rowid() AS id');
+	return row ? getTelegramOrderById(row.id) : null;
+}
+
+export async function attachReceiptToLatestTelegramOrder(input: {
+	resellerId: number;
+	botId: number;
+	telegramUserId: number;
+	receiptText?: string;
+	receiptFileId?: string;
+}) {
+	await ensureResellerTables();
+	const order = await queryFirst<TelegramBotOrderRow>(
+		`SELECT id, reseller_id, bot_id, telegram_user_id, telegram_username, customer_name,
+		        quota_gb, duration_days, price_toman, inbound_id, receipt_text, receipt_file_id,
+		        status, reseller_note, customer_note, xui_request_id, xui_client_uuid, config_url,
+		        delivery_error, created_at, updated_at, reviewed_at, delivered_at
+		 FROM telegram_bot_orders
+		 WHERE reseller_id = ? AND bot_id = ? AND telegram_user_id = ? AND status = 'awaiting_receipt'
+		 ORDER BY created_at DESC, id DESC LIMIT 1`,
+		[input.resellerId, input.botId, input.telegramUserId]
+	);
+	if (!order) return null;
+	await run(
+		`UPDATE telegram_bot_orders
+		 SET receipt_text = ?, receipt_file_id = ?, status = 'pending_review', updated_at = ?
+		 WHERE id = ?`,
+		[
+			input.receiptText?.trim().slice(0, 1000) ?? '',
+			input.receiptFileId?.trim().slice(0, 200) ?? '',
+			nowSeconds(),
+			order.id
+		]
+	);
+	return getTelegramOrderById(order.id);
+}
+
+export async function reviewTelegramBotOrder(
+	resellerId: number,
+	orderId: number,
+	action: 'approve' | 'reject' | 'retry',
+	note: string,
+	origin: string,
+	fallbackHost?: string
+) {
+	await ensureResellerTables();
+	const order = await getTelegramOrderById(orderId);
+	if (!order || order.resellerId !== resellerId) throw new Error('سفارش پیدا نشد.');
+	const botRow = await getTelegramBotRowByResellerId(resellerId);
+	if (!botRow) throw new Error('بات تلگرام وصل نیست.');
+	const settings = await getFeatureSettings();
+	const token = decryptTelegramToken(botRow.token_encrypted);
+
+	if (action === 'reject') {
+		const now = nowSeconds();
+		await run(
+			`UPDATE telegram_bot_orders SET status = 'rejected', reseller_note = ?, reviewed_at = ?, updated_at = ? WHERE id = ?`,
+			[note.trim().slice(0, 500), now, now, order.id]
+		);
+		await sendTelegramMessage(token, order.telegramUserId, 'سفارش شما توسط فروشنده رد شد.', settings.telegramBotSocksProxyUrl).catch(() => undefined);
+		return;
+	}
+
+	if (action === 'approve' && order.status !== 'pending_review') {
+		throw new Error('فقط سفارش‌های در انتظار بررسی قابل تایید هستند.');
+	}
+	if (action === 'retry' && order.status !== 'delivery_failed' && order.status !== 'approved') {
+		throw new Error('ارسال دوباره فقط برای سفارش ساخته‌شده امکان‌پذیر است.');
+	}
+
+	let configUrl = order.configUrl;
+	let uuid = order.xuiClientUuid;
+	let requestId = order.xuiRequestId;
+
+	if (action === 'approve') {
+		const created = await createCustomResellerRequest(
+			resellerId,
+			{
+				inboundId: order.inboundId,
+				quotaGb: order.quotaGb,
+				durationDays: order.durationDays,
+				priceToman: order.priceToman
+			},
+			order.customerName,
+			`Telegram order #${order.id}${note.trim() ? ` - ${note.trim()}` : ''}`,
+			origin,
+			fallbackHost
+		);
+		configUrl = created.configUrl;
+		uuid = created.xuiClientUuid;
+		requestId = created.id;
+		const now = nowSeconds();
+		await run(
+			`UPDATE telegram_bot_orders
+			 SET status = 'approved', reseller_note = ?, xui_request_id = ?, xui_client_uuid = ?,
+			     config_url = ?, reviewed_at = ?, updated_at = ?, delivery_error = ''
+			 WHERE id = ?`,
+			[note.trim().slice(0, 500), requestId, uuid, configUrl, now, now, order.id]
+		);
+	}
+
+	const userPageUrl = uuid ? `${origin.replace(/\/+$/, '')}/user/${uuid}` : '';
+	const message = [
+		'سفارش شما تایید و کانفیگ ساخته شد.',
+		configUrl ? `<code>${configUrl}</code>` : '',
+		userPageUrl ? `پنل کاربر: ${userPageUrl}` : ''
+	]
+		.filter(Boolean)
+		.join('\n\n');
+
+	try {
+		await sendTelegramMessage(token, order.telegramUserId, message, settings.telegramBotSocksProxyUrl);
+		await run(
+			`UPDATE telegram_bot_orders SET status = 'approved', delivered_at = ?, delivery_error = '', updated_at = ? WHERE id = ?`,
+			[nowSeconds(), nowSeconds(), order.id]
+		);
+	} catch (error) {
+		await run(
+			`UPDATE telegram_bot_orders SET status = 'delivery_failed', delivery_error = ?, updated_at = ? WHERE id = ?`,
+			[error instanceof Error ? error.message.slice(0, 500) : 'ارسال تلگرام ناموفق بود.', nowSeconds(), order.id]
+		);
+	}
+}
+
 export async function createResellerPlan(input: {
 	quotaGb: number;
 	durationDays: number;
@@ -2880,7 +3426,8 @@ export async function getAdminResellerOverview() {
 		gbLedgerRows,
 		creditRequestRows,
 		sessionRows,
-		groupRows
+		groupRows,
+		telegramBotRows
 	] = await Promise.all([
 		queryAll<ResellerAccountRow>(
 			`
@@ -2900,6 +3447,7 @@ export async function getAdminResellerOverview() {
 				COALESCE(sub_reseller_limit, 10) AS sub_reseller_limit,
 				COALESCE(group_id, NULL) AS group_id,
 				COALESCE(client_tickets_enabled, 0) AS client_tickets_enabled,
+				COALESCE(telegram_bot_allowed, 0) AS telegram_bot_allowed,
 				COALESCE(is_system_manager, 0) AS is_system_manager,
 				created_at,
 				updated_at
@@ -2992,6 +3540,11 @@ export async function getAdminResellerOverview() {
 		),
 		queryAll<ResellerGroupRow>(
 			`SELECT id, name, color, badge_icon, description, created_at, updated_at FROM reseller_groups ORDER BY name ASC`
+		),
+		queryAll<ResellerTelegramBotRow>(
+			`SELECT id, reseller_id, bot_id, username, display_name, token_encrypted, webhook_secret,
+			        webhook_path_secret, status, webhook_url, last_error, last_update_at, created_at, updated_at
+			 FROM reseller_telegram_bots`
 		)
 	]);
 
@@ -3021,6 +3574,7 @@ export async function getAdminResellerOverview() {
 				expiresAt: session.expires_at,
 				userAgent: session.user_agent
 			}));
+		const telegramBotRow = telegramBotRows.find((bot) => bot.reseller_id === account.id) ?? null;
 		let deleteBlockedReason: string | null = null;
 		if (requests.length > 0) deleteBlockedReason = 'این فروشنده کانفیگ ثبت‌شده دارد.';
 		else if (creditRequests.length > 0) deleteBlockedReason = 'این فروشنده درخواست شارژ دارد.';
@@ -3047,6 +3601,8 @@ export async function getAdminResellerOverview() {
 			groupColor: groupRow?.color ?? null,
 			groupBadgeIcon: groupRow?.badge_icon ?? null,
 			clientTicketsEnabled: account.client_tickets_enabled === 1,
+			telegramBotAllowed: account.telegram_bot_allowed === 1,
+			telegramBot: telegramBotRow ? mapTelegramBotRow(telegramBotRow) : null,
 			isSystemManager: account.is_system_manager === 1,
 			createdAt: account.created_at,
 			updatedAt: account.updated_at,
@@ -3272,6 +3828,7 @@ export async function getResellerDashboardState(
 				managerMessage: '',
 				debtCapToman: null,
 				clientTicketsEnabled: false,
+				telegramBotAllowed: false,
 				subResellerLimit: 10,
 				group: null
 			},
@@ -3319,6 +3876,10 @@ export async function getResellerDashboardState(
 			subCreditRequests: [],
 			subResellerTickets: [],
 			clientTickets: [],
+			telegramBotFeatureEnabled: false,
+			telegramBotAllowed: false,
+			telegramBot: null,
+			telegramOrders: [],
 			sessions: []
 		};
 	}
@@ -3792,6 +4353,7 @@ async function getOrCreateManagerSystemAccount() {
 		 parent_reseller_id, can_manage_sub_resellers, COALESCE(sub_reseller_limit, 10) AS sub_reseller_limit,
 		 COALESCE(group_id, NULL) AS group_id,
 		 COALESCE(client_tickets_enabled, 0) AS client_tickets_enabled,
+		 COALESCE(telegram_bot_allowed, 0) AS telegram_bot_allowed,
 		 COALESCE(is_system_manager, 0) AS is_system_manager, created_at, updated_at
 		 FROM reseller_accounts WHERE COALESCE(is_system_manager, 0) = 1 LIMIT 1`
 	);

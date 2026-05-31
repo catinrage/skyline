@@ -20,6 +20,11 @@
 				configIssueReportCooldownMinutes: number;
 				latencyTestTargetUrl: string;
 				speedTestTargetUrl: string;
+				telegramBotSocksProxyUrl: string;
+				telegramBotMaxCustomQuotaGb: number;
+				telegramBotMaxCustomDurationDays: number;
+				telegramBotMinCustomPriceToman: number;
+				telegramBotDraftExpiryMinutes: number;
 			};
 		};
 	};
@@ -38,7 +43,7 @@
 	]);
 
 	function hasSettings(featureKey: string) {
-		return featureKey === 'config_issue_report' || featureKey === 'proxy_ping' || featureKey === 'speed_test_widget';
+		return featureKey === 'config_issue_report' || featureKey === 'proxy_ping' || featureKey === 'speed_test_widget' || featureKey === 'telegram_sales_bot';
 	}
 
 	function groupLabel(group: FeatureGroup | undefined) {
@@ -183,6 +188,58 @@
 									placeholder="http://ipv4.download.thinkbroadband.com/20MB.zip"
 								/>
 							</div>
+						{:else if feature.key === 'telegram_sales_bot'}
+							<input
+								type="hidden"
+								name="configIssueReportCooldownMinutes"
+								value={data.featureSettings.configIssueReportCooldownMinutes}
+							/>
+							<input type="hidden" name="latencyTestTargetUrl" value={data.featureSettings.latencyTestTargetUrl} />
+							<input type="hidden" name="speedTestTargetUrl" value={data.featureSettings.speedTestTargetUrl} />
+							<div class="settings-field wide">
+								<label for="telegram-bot-proxy">پراکسی SOCKS5 بات</label>
+								<input
+									id="telegram-bot-proxy"
+									name="telegramBotSocksProxyUrl"
+									type="text"
+									dir="ltr"
+									value={data.featureSettings.telegramBotSocksProxyUrl}
+									placeholder="socks5h://127.0.0.1:1080"
+								/>
+							</div>
+							<div class="settings-field">
+								<label for="telegram-max-quota">سقف حجم سفارش</label>
+								<div class="compact-input">
+									<input id="telegram-max-quota" name="telegramBotMaxCustomQuotaGb" type="number" min="1" max="10000" step="0.01" value={data.featureSettings.telegramBotMaxCustomQuotaGb} />
+									<span>GB</span>
+								</div>
+							</div>
+							<div class="settings-field">
+								<label for="telegram-max-days">سقف مدت سفارش</label>
+								<div class="compact-input">
+									<input id="telegram-max-days" name="telegramBotMaxCustomDurationDays" type="number" min="1" max="3650" value={data.featureSettings.telegramBotMaxCustomDurationDays} />
+									<span>روز</span>
+								</div>
+							</div>
+							<div class="settings-field">
+								<label for="telegram-min-price">حداقل قیمت سفارش</label>
+								<input id="telegram-min-price" name="telegramBotMinCustomPriceToman" type="number" min="0" value={data.featureSettings.telegramBotMinCustomPriceToman} />
+							</div>
+							<div class="settings-field">
+								<label for="telegram-expiry">انقضای سفارش بدون رسید</label>
+								<div class="compact-input">
+									<input id="telegram-expiry" name="telegramBotDraftExpiryMinutes" type="number" min="5" max="10080" value={data.featureSettings.telegramBotDraftExpiryMinutes} />
+									<span>دقیقه</span>
+								</div>
+							</div>
+						{/if}
+
+						{#if feature.key !== 'telegram_sales_bot'}
+							<input type="hidden" name="telegramBotSocksProxyUrl" value={data.featureSettings.telegramBotSocksProxyUrl} />
+							<input type="hidden" name="telegramBotMaxCustomQuotaGb" value={data.featureSettings.telegramBotMaxCustomQuotaGb} />
+							<input type="hidden" name="telegramBotMaxCustomDurationDays" value={data.featureSettings.telegramBotMaxCustomDurationDays} />
+							<input type="hidden" name="telegramBotMinCustomPriceToman" value={data.featureSettings.telegramBotMinCustomPriceToman} />
+							<input type="hidden" name="telegramBotDraftExpiryMinutes" value={data.featureSettings.telegramBotDraftExpiryMinutes} />
 						{/if}
 
 						<button type="submit" class="settings-save" disabled={settingsForm.pending > 0}>

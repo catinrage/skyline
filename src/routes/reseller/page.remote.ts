@@ -47,7 +47,11 @@ import {
 	closeClientTicket,
 	deleteClientTicket,
 	setResellerClientTicketsEnabled,
-	revokeOwnResellerSession
+	revokeOwnResellerSession,
+	connectResellerTelegramBot,
+	disconnectResellerTelegramBot,
+	pauseResellerTelegramBot,
+	reviewTelegramBotOrder
 } from '$lib/server/resellers';
 import { z } from 'zod';
 
@@ -342,6 +346,69 @@ export const deleteTemplateCommand = command(
 		} catch (error) {
 			return {
 				templateError: error instanceof Error ? error.message : 'حذف قالب انجام نشد.'
+			};
+		}
+	}
+);
+
+export const connectTelegramBotCommand = command(
+	z.object({
+		token: z.string().trim().min(20, 'توکن بات تلگرام را وارد کنید.')
+	}),
+	async ({ token }) => {
+		const reseller = await requireReseller();
+		const { url } = getRequestEvent();
+		if (!reseller) return { telegramBotError: 'نشست شما منقضی شده است. دوباره وارد شوید.' };
+		try {
+			checkActionRateLimit('telegram-bot-connect', reseller.id);
+			await connectResellerTelegramBot(reseller.id, token, url.origin);
+			await getResellerState().set(await buildState());
+			return { telegramBotSuccess: 'بات تلگرام متصل شد.' };
+		} catch (error) {
+			return {
+				telegramBotError: error instanceof Error ? error.message : 'اتصال بات انجام نشد.'
+			};
+		}
+	}
+);
+
+export const pauseTelegramBotCommand = command(
+	z.object({ paused: z.boolean() }),
+	async ({ paused }) => {
+		const reseller = await requireReseller();
+		if (!reseller) return { telegramBotError: 'نشست شما منقضی شده است. دوباره وارد شوید.' };
+		await pauseResellerTelegramBot(reseller.id, paused);
+		await getResellerState().set(await buildState());
+		return { telegramBotSuccess: paused ? 'بات متوقف شد.' : 'بات فعال شد.' };
+	}
+);
+
+export const disconnectTelegramBotCommand = command(async () => {
+	const reseller = await requireReseller();
+	if (!reseller) return { telegramBotError: 'نشست شما منقضی شده است. دوباره وارد شوید.' };
+	await disconnectResellerTelegramBot(reseller.id);
+	await getResellerState().set(await buildState());
+	return { telegramBotSuccess: 'بات تلگرام قطع شد.' };
+});
+
+export const reviewTelegramOrderCommand = command(
+	z.object({
+		orderId: z.number().int().positive(),
+		action: z.enum(['approve', 'reject', 'retry']),
+		note: z.string().trim().max(500).optional()
+	}),
+	async ({ orderId, action, note }) => {
+		const reseller = await requireReseller();
+		const { url } = getRequestEvent();
+		if (!reseller) return { telegramOrderError: 'نشست شما منقضی شده است. دوباره وارد شوید.' };
+		try {
+			checkActionRateLimit('telegram-order-review', reseller.id);
+			await reviewTelegramBotOrder(reseller.id, orderId, action, note ?? '', url.origin, url.hostname);
+			await getResellerState().set(await buildState());
+			return { telegramOrderSuccess: 'وضعیت سفارش به‌روزرسانی شد.' };
+		} catch (error) {
+			return {
+				telegramOrderError: error instanceof Error ? error.message : 'بررسی سفارش انجام نشد.'
 			};
 		}
 	}

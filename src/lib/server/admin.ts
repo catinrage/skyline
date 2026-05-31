@@ -23,7 +23,8 @@ type FeatureFlagDefinition = {
 		| 'client_apps_links'
 		| 'online_status'
 		| 'reseller_sales'
-		| 'client_tickets';
+		| 'client_tickets'
+		| 'telegram_sales_bot';
 	label: string;
 	description: string;
 	group: 'operation' | 'user_panel' | 'sales';
@@ -62,6 +63,11 @@ export type FeatureSettings = {
 	configIssueReportCooldownMinutes: number;
 	latencyTestTargetUrl: string;
 	speedTestTargetUrl: string;
+	telegramBotSocksProxyUrl: string;
+	telegramBotMaxCustomQuotaGb: number;
+	telegramBotMaxCustomDurationDays: number;
+	telegramBotMinCustomPriceToman: number;
+	telegramBotDraftExpiryMinutes: number;
 };
 
 export type RuntimeSettings = {
@@ -76,7 +82,12 @@ export type RuntimeSettings = {
 const defaultFeatureSettings: FeatureSettings = {
 	configIssueReportCooldownMinutes: 1,
 	latencyTestTargetUrl: 'https://www.gstatic.com/generate_204',
-	speedTestTargetUrl: 'http://ipv4.download.thinkbroadband.com/20MB.zip'
+	speedTestTargetUrl: 'http://ipv4.download.thinkbroadband.com/20MB.zip',
+	telegramBotSocksProxyUrl: '',
+	telegramBotMaxCustomQuotaGb: 100,
+	telegramBotMaxCustomDurationDays: 365,
+	telegramBotMinCustomPriceToman: 0,
+	telegramBotDraftExpiryMinutes: 60
 };
 
 const defaultRuntimeSettings: RuntimeSettings = {
@@ -159,6 +170,13 @@ export const featureFlagDefinitions: readonly FeatureFlagDefinition[] = [
 		label: 'تیکت مشتریان',
 		description:
 			'سیستم تیکت‌گذاری مشتری به فروشنده را فعال می‌کند. فروشندگانی که این قابلیت برایشان فعال شده، می‌توانند از مشتریان خود پشتیبانی درون‌برنامه‌ای دریافت کنند.',
+		group: 'sales'
+	},
+	{
+		key: 'telegram_sales_bot',
+		label: 'بات تلگرام فروشنده',
+		description:
+			'به فروشندگان مجاز اجازه می‌دهد یک بات تلگرام فروش‌محور وصل کنند، سفارش بگیرند و رسیدها را از پنل بررسی کنند.',
 		group: 'sales'
 	}
 ] as const;
@@ -694,6 +712,10 @@ function normalizeProbeTargetUrl(
 
 function normalizeFeatureSettings(settings: Partial<FeatureSettings>): FeatureSettings {
 	const cooldown = Number(settings.configIssueReportCooldownMinutes);
+	const telegramBotMaxCustomQuotaGb = Number(settings.telegramBotMaxCustomQuotaGb);
+	const telegramBotMaxCustomDurationDays = Number(settings.telegramBotMaxCustomDurationDays);
+	const telegramBotMinCustomPriceToman = Number(settings.telegramBotMinCustomPriceToman);
+	const telegramBotDraftExpiryMinutes = Number(settings.telegramBotDraftExpiryMinutes);
 	const latencyTestTargetUrl = normalizeProbeTargetUrl(
 		settings.latencyTestTargetUrl,
 		defaultFeatureSettings.latencyTestTargetUrl,
@@ -710,7 +732,30 @@ function normalizeFeatureSettings(settings: Partial<FeatureSettings>): FeatureSe
 				? cooldown
 				: defaultFeatureSettings.configIssueReportCooldownMinutes,
 		latencyTestTargetUrl,
-		speedTestTargetUrl
+		speedTestTargetUrl,
+		telegramBotSocksProxyUrl: String(settings.telegramBotSocksProxyUrl ?? '').trim(),
+		telegramBotMaxCustomQuotaGb:
+			Number.isFinite(telegramBotMaxCustomQuotaGb) &&
+			telegramBotMaxCustomQuotaGb >= 1 &&
+			telegramBotMaxCustomQuotaGb <= 10000
+				? telegramBotMaxCustomQuotaGb
+				: defaultFeatureSettings.telegramBotMaxCustomQuotaGb,
+		telegramBotMaxCustomDurationDays:
+			Number.isInteger(telegramBotMaxCustomDurationDays) &&
+			telegramBotMaxCustomDurationDays >= 1 &&
+			telegramBotMaxCustomDurationDays <= 3650
+				? telegramBotMaxCustomDurationDays
+				: defaultFeatureSettings.telegramBotMaxCustomDurationDays,
+		telegramBotMinCustomPriceToman:
+			Number.isInteger(telegramBotMinCustomPriceToman) && telegramBotMinCustomPriceToman >= 0
+				? telegramBotMinCustomPriceToman
+				: defaultFeatureSettings.telegramBotMinCustomPriceToman,
+		telegramBotDraftExpiryMinutes:
+			Number.isInteger(telegramBotDraftExpiryMinutes) &&
+			telegramBotDraftExpiryMinutes >= 5 &&
+			telegramBotDraftExpiryMinutes <= 10080
+				? telegramBotDraftExpiryMinutes
+				: defaultFeatureSettings.telegramBotDraftExpiryMinutes
 	};
 }
 
@@ -725,7 +770,26 @@ export async function getFeatureSettings() {
 		latencyTestTargetUrl:
 			(await getSetting('latency_test_target_url')) ?? defaultFeatureSettings.latencyTestTargetUrl,
 		speedTestTargetUrl:
-			(await getSetting('speed_test_target_url')) ?? defaultFeatureSettings.speedTestTargetUrl
+			(await getSetting('speed_test_target_url')) ?? defaultFeatureSettings.speedTestTargetUrl,
+		telegramBotSocksProxyUrl:
+			(await getSetting('telegram_bot_socks_proxy_url')) ??
+			defaultFeatureSettings.telegramBotSocksProxyUrl,
+		telegramBotMaxCustomQuotaGb: Number(
+			(await getSetting('telegram_bot_max_custom_quota_gb')) ??
+				defaultFeatureSettings.telegramBotMaxCustomQuotaGb
+		),
+		telegramBotMaxCustomDurationDays: Number(
+			(await getSetting('telegram_bot_max_custom_duration_days')) ??
+				defaultFeatureSettings.telegramBotMaxCustomDurationDays
+		),
+		telegramBotMinCustomPriceToman: Number(
+			(await getSetting('telegram_bot_min_custom_price_toman')) ??
+				defaultFeatureSettings.telegramBotMinCustomPriceToman
+		),
+		telegramBotDraftExpiryMinutes: Number(
+			(await getSetting('telegram_bot_draft_expiry_minutes')) ??
+				defaultFeatureSettings.telegramBotDraftExpiryMinutes
+		)
 	});
 }
 
@@ -739,6 +803,23 @@ export async function updateFeatureSettings(settings: FeatureSettings) {
 	);
 	await setSetting('latency_test_target_url', normalized.latencyTestTargetUrl);
 	await setSetting('speed_test_target_url', normalized.speedTestTargetUrl);
+	await setSetting('telegram_bot_socks_proxy_url', normalized.telegramBotSocksProxyUrl);
+	await setSetting(
+		'telegram_bot_max_custom_quota_gb',
+		String(normalized.telegramBotMaxCustomQuotaGb)
+	);
+	await setSetting(
+		'telegram_bot_max_custom_duration_days',
+		String(normalized.telegramBotMaxCustomDurationDays)
+	);
+	await setSetting(
+		'telegram_bot_min_custom_price_toman',
+		String(normalized.telegramBotMinCustomPriceToman)
+	);
+	await setSetting(
+		'telegram_bot_draft_expiry_minutes',
+		String(normalized.telegramBotDraftExpiryMinutes)
+	);
 	adminLogger.warn('Updated feature settings.', normalized);
 }
 

@@ -232,6 +232,8 @@ export interface ResellerAccountSummary {
 	groupColor: string | null;
 	groupBadgeIcon: string | null;
 	clientTicketsEnabled: boolean;
+	telegramBotAllowed: boolean;
+	telegramBot: ResellerTelegramBot | null;
 	isSystemManager: boolean;
 	createdAt: number;
 	updatedAt: number;
@@ -351,6 +353,58 @@ export interface ClientTicket {
 	messages: ClientTicketMessage[];
 }
 
+// ── Telegram seller bot types ─────────────────────────────────────────────────
+
+export type TelegramBotStatus = 'active' | 'paused' | 'disabled' | 'error';
+
+export interface ResellerTelegramBot {
+	id: number;
+	resellerId: number;
+	botId: number;
+	username: string;
+	displayName: string;
+	status: TelegramBotStatus;
+	webhookUrl: string;
+	lastError: string;
+	lastUpdateAt: number | null;
+	createdAt: number;
+	updatedAt: number;
+}
+
+export type TelegramBotOrderStatus =
+	| 'awaiting_receipt'
+	| 'pending_review'
+	| 'approved'
+	| 'rejected'
+	| 'expired'
+	| 'delivery_failed';
+
+export interface TelegramBotOrder {
+	id: number;
+	resellerId: number;
+	botId: number;
+	telegramUserId: number;
+	telegramUsername: string;
+	customerName: string;
+	quotaGb: number;
+	durationDays: number;
+	priceToman: number;
+	inboundId: number;
+	receiptText: string;
+	receiptFileId: string;
+	status: TelegramBotOrderStatus;
+	resellerNote: string;
+	customerNote: string;
+	xuiRequestId: number | null;
+	xuiClientUuid: string | null;
+	configUrl: string | null;
+	deliveryError: string;
+	createdAt: number;
+	updatedAt: number;
+	reviewedAt: number | null;
+	deliveredAt: number | null;
+}
+
 // ── Sub-reseller types ────────────────────────────────────────────────────────
 
 export interface ResellerSubPackage {
@@ -412,6 +466,7 @@ export interface ResellerDashboardState {
 		managerMessage: string;
 		debtCapToman: number | null;
 		clientTicketsEnabled: boolean;
+		telegramBotAllowed: boolean;
 		subResellerLimit: number;
 		group: ResellerGroup | null;
 	};
@@ -437,6 +492,10 @@ export interface ResellerDashboardState {
 	subResellerTickets: SubResellerTicket[];
 	// Client tickets (tickets from clients assigned to this reseller)
 	clientTickets: ClientTicket[];
+	telegramBotFeatureEnabled: boolean;
+	telegramBotAllowed: boolean;
+	telegramBot: ResellerTelegramBot | null;
+	telegramOrders: TelegramBotOrder[];
 	sessions: Array<{
 		id: number;
 		createdAt: number;
