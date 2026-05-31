@@ -3144,7 +3144,7 @@ export async function syncResellerTelegramBotStatus(resellerId: number) {
 	const issue =
 		info.url !== row.webhook_url
 			? 'وبهوک ثبت‌شده در تلگرام با آدرس ذخیره‌شده Skyline یکی نیست. بات را دوباره متصل کنید.'
-			: (info.last_error_message ?? '');
+			: (info.last_error_message ?? (row.status === 'error' ? (row.last_error ?? '') : ''));
 	const nextStatus: TelegramBotStatus = row.status === 'paused' || row.status === 'disabled'
 		? row.status
 		: issue
@@ -3185,11 +3185,46 @@ async function assertTelegramOrderLimits(quotaGb: number, durationDays: number, 
 
 export async function getTelegramWebhookContext(secret: string, secretToken: string | null) {
 	const bot = await getTelegramBotRowByWebhookSecret(secret);
-	if (!bot || bot.webhook_secret !== secretToken) return null;
+	if (!bot) {
+		resellerLogger.warn('Rejected Telegram webhook with unknown path secret.');
+		return null;
+	}
+	if (bot.webhook_secret !== secretToken) {
+		const reason =
+			'درخواست تلگرام رسید، اما هدر امنیتی X-Telegram-Bot-Api-Secret-Token حذف یا اشتباه بود. تنظیمات reverse proxy را بررسی کنید.';
+		await run(
+			`UPDATE reseller_telegram_bots SET status = 'error', last_error = ?, updated_at = ? WHERE id = ?`,
+			[reason, nowSeconds(), bot.id]
+		);
+		resellerLogger.warn('Rejected Telegram webhook due to missing or invalid secret header.', {
+			botId: bot.id,
+			resellerId: bot.reseller_id,
+			hasSecretToken: Boolean(secretToken)
+		});
+		return null;
+	}
 	const account = await getResellerAccountById(bot.reseller_id);
-	if (!account || account.is_active !== 1 || account.telegram_bot_allowed !== 1) return null;
-	if (account.parent_reseller_id !== null) return null;
-	if (!(await isFeatureEnabled('telegram_sales_bot'))) return null;
+	if (!account || account.is_active !== 1 || account.telegram_bot_allowed !== 1) {
+		resellerLogger.warn('Rejected Telegram webhook because reseller is inactive or not allowed.', {
+			botId: bot.id,
+			resellerId: bot.reseller_id
+		});
+		return null;
+	}
+	if (account.parent_reseller_id !== null) {
+		resellerLogger.warn('Rejected Telegram webhook for sub-reseller account.', {
+			botId: bot.id,
+			resellerId: bot.reseller_id
+		});
+		return null;
+	}
+	if (!(await isFeatureEnabled('telegram_sales_bot'))) {
+		resellerLogger.warn('Rejected Telegram webhook because feature flag is disabled.', {
+			botId: bot.id,
+			resellerId: bot.reseller_id
+		});
+		return null;
+	}
 	if (bot.status === 'paused' || bot.status === 'disabled') return null;
 	return { bot, account, token: decryptTelegramToken(bot.token_encrypted) };
 }
@@ -3204,9 +3239,10 @@ export async function touchTelegramBotUpdate(botId: number) {
 
 export async function recordTelegramBotError(botId: number, message: string) {
 	await ensureResellerTables();
+	const detail = `خطای پردازش یا پاسخ‌دهی بات: ${message}`;
 	await run(
 		`UPDATE reseller_telegram_bots SET status = 'error', last_error = ?, updated_at = ? WHERE id = ?`,
-		[message.slice(0, 500), nowSeconds(), botId]
+		[detail.slice(0, 500), nowSeconds(), botId]
 	);
 }
 
