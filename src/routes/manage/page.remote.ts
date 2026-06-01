@@ -89,6 +89,7 @@ import {
 	managerExtendDuration,
 	getManagerConfigViews,
 	getManagerConfigTemplates,
+	revokeManagerConfig,
 	revokeOwnResellerSession
 } from '$lib/server/resellers';
 import { checkXuiHealth, getVpnDashboardData, getXuiInboundOptions } from '$lib/server/xui';
@@ -2077,6 +2078,85 @@ export const adminExtendDuration = command(
 			return { extendSuccess: `${addDays} روز به کانفیگ اضافه شد.` };
 		} catch (error) {
 			return { extendError: error instanceof Error ? error.message : 'افزودن روز انجام نشد.' };
+		}
+	}
+);
+
+export const adminToggleConfigCommand = command(
+	z.object({
+		id: z.number().int().positive(),
+		enabled: z.boolean()
+	}),
+	async ({ id, enabled }) => {
+		const cookies = await requireAdminSession();
+		if (!cookies) return { toggleConfigError: 'نشست منقضی شده است.' };
+		try {
+			await managerToggleConfig(id, enabled);
+			await getManageState().set(await buildManageState(true));
+			return {
+				toggleConfigSuccess: enabled ? 'کانفیگ فعال شد.' : 'کانفیگ غیرفعال شد.'
+			};
+		} catch (error) {
+			return {
+				toggleConfigError: error instanceof Error ? error.message : 'تغییر وضعیت انجام نشد.'
+			};
+		}
+	}
+);
+
+export const adminRechargeConfigCommand = command(
+	z.object({ id: z.number().int().positive() }),
+	async ({ id }) => {
+		const cookies = await requireAdminSession();
+		if (!cookies) return { rechargeError: 'نشست منقضی شده است.' };
+		const { url } = getRequestEvent();
+		try {
+			await managerRenewConfig(id, url.hostname);
+			await getManageState().set(await buildManageState(true));
+			return { rechargeSuccess: 'کانفیگ شارژ شد.' };
+		} catch (error) {
+			return {
+				rechargeError: error instanceof Error ? error.message : 'شارژ مجدد انجام نشد.'
+			};
+		}
+	}
+);
+
+export const adminAddQuotaCommand = command(
+	z.object({
+		id: z.number().int().positive(),
+		addGb: z.number().positive().max(10000)
+	}),
+	async ({ id, addGb }) => {
+		const cookies = await requireAdminSession();
+		if (!cookies) return { addQuotaError: 'نشست منقضی شده است.' };
+		const { url } = getRequestEvent();
+		try {
+			await managerAddQuota(id, addGb, url.hostname);
+			await getManageState().set(await buildManageState(true));
+			return { addQuotaSuccess: `${addGb} گیگابایت به کانفیگ اضافه شد.` };
+		} catch (error) {
+			return {
+				addQuotaError: error instanceof Error ? error.message : 'افزایش حجم انجام نشد.'
+			};
+		}
+	}
+);
+
+export const adminRevokeConfigCommand = command(
+	z.object({ id: z.number().int().positive() }),
+	async ({ id }) => {
+		const cookies = await requireAdminSession();
+		if (!cookies) return { revokeError: 'نشست منقضی شده است.' };
+		const { url } = getRequestEvent();
+		try {
+			await revokeManagerConfig(id, url.hostname);
+			await getManageState().set(await buildManageState(true));
+			return { revokeSuccess: 'کانفیگ حذف شد.' };
+		} catch (error) {
+			return {
+				revokeError: error instanceof Error ? error.message : 'لغو کانفیگ انجام نشد.'
+			};
 		}
 	}
 );

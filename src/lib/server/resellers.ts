@@ -4500,6 +4500,11 @@ export async function deleteManagerConfigTemplate(templateId: number) {
 	await deleteResellerConfigTemplate(manager.id, templateId);
 }
 
+export async function revokeManagerConfig(requestId: number, fallbackHost?: string) {
+	const manager = await getOrCreateManagerSystemAccount();
+	await revokeResellerRequest(manager.id, requestId, fallbackHost);
+}
+
 /**
  * Create a VPN config directly for the manager's internal seller account.
  */

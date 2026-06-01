@@ -11,6 +11,7 @@ export function buildManageNav(
 	return [
 		{ id: 'traffic', label: 'ترافیک', icon: 'traffic', href: `${base}/traffic`, group: 'داشبورد' },
 		{ id: 'create', label: 'ساخت کانفیگ', icon: 'plus-network', href: `${base}/create`, group: 'داشبورد' },
+		{ id: 'configs', label: 'کانفیگ‌ها', icon: 'list', href: `${base}/configs`, group: 'داشبورد' },
 
 		{ id: 'resellers', label: 'فروشندگان', icon: 'store', href: `${base}/resellers`, group: 'فروشندگان' },
 		{ id: 'groups', label: 'گروه‌های فروشندگان', icon: 'list', href: `${base}/groups`, group: 'فروشندگان' },
@@ -34,7 +35,8 @@ export function buildManageNav(
 
 export const manageTabMeta: Record<string, { title: string; subtitle: string }> = {
 	traffic: { title: 'ترافیک و نمای کلی', subtitle: 'خلاصه مصرف و وضعیت کانفیگ‌های فعال در x-ui.' },
-	create: { title: 'کانفیگ‌های مدیر', subtitle: 'کانفیگ مشتریان مدیر با مالکیت داخلی مستقل.' },
+	create: { title: 'ساخت کانفیگ جدید', subtitle: 'کانفیگ مشتریان مدیر با مالکیت داخلی مستقل بسازید.' },
+	configs: { title: 'مدیریت کانفیگ‌ها', subtitle: 'مشاهده، شارژ، لغو و کپی لینک کانفیگ‌های مدیر.' },
 	resellers: { title: 'مدیریت فروشندگان', subtitle: 'ایجاد فروشنده، کنترل وضعیت، محدودیت سرورها و موجودی GB.' },
 	groups: { title: 'گروه‌های فروشندگان', subtitle: 'رده‌های تجاری و دسترسی به بسته‌های شارژ خصوصی.' },
 	'credit-requests': { title: 'درخواست‌های شارژ', subtitle: 'بررسی و تایید رسیدهای ارسالی فروشندگان برای افزودن موجودی GB.' },

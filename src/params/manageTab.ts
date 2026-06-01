@@ -3,6 +3,7 @@ import type { ParamMatcher } from '@sveltejs/kit';
 export const manageTabIds = [
 	'traffic',
 	'create',
+	'configs',
 	'message',
 	'client-apps',
 	'vless-rewrite',

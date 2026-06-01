@@ -18,6 +18,7 @@
 	import TrafficTab from '$lib/components/admin/manage/tabs/TrafficTab.svelte';
 	import VlessRewriteTab from '$lib/components/admin/manage/tabs/VlessRewriteTab.svelte';
 	import AdminCreateConfigTab from '$lib/components/admin/manage/tabs/AdminCreateConfigTab.svelte';
+	import ManagerConfigsTab from '$lib/components/admin/manage/tabs/ManagerConfigsTab.svelte';
 
 	const manageState = getContext('manageState') as ReturnType<
 		typeof import('../../../manage/page.remote').getManageState
@@ -30,6 +31,8 @@
 		<TrafficTab data={manageState.current} />
 	{:else if tab === 'create'}
 		<AdminCreateConfigTab data={manageState.current} {manageState} />
+	{:else if tab === 'configs'}
+		<ManagerConfigsTab data={manageState.current} {manageState} />
 	{:else if tab === 'message'}
 		<MessageTab data={manageState.current} />
 	{:else if tab === 'client-apps'}

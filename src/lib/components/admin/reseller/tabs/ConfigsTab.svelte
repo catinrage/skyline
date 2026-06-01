@@ -16,10 +16,10 @@
 	import VaStatRow from '$lib/components/admin/va/VaStatRow.svelte';
 	import VaStatusDot from '$lib/components/admin/va/VaStatusDot.svelte';
 	import {
-		addQuotaCommand,
-		rechargeConfigCommand,
-		revokeConfigCommand,
-		toggleConfigEnabledCommand
+		addQuotaCommand as defaultAddQuotaCommand,
+		rechargeConfigCommand as defaultRechargeConfigCommand,
+		revokeConfigCommand as defaultRevokeConfigCommand,
+		toggleConfigEnabledCommand as defaultToggleConfigEnabledCommand
 	} from '../../../../../routes/reseller/page.remote';
 
 	type RequestStatus = 'active' | 'disabled' | 'depleted' | 'expired' | 'revoked' | 'missing';
@@ -82,10 +82,29 @@
 			charges?: ChargeItem[];
 			salesEnabled: boolean;
 		};
-		resellerState: any;
+		resellerState?: any;
+		stateTarget?: any;
+		commands?: {
+			toggle: any;
+			recharge: any;
+			addQuota: any;
+			revoke: any;
+		};
+		ownerKey?: string;
 	};
 
-	let { data, resellerState }: Props = $props();
+	let {
+		data,
+		resellerState,
+		stateTarget = resellerState,
+		commands = {
+			toggle: defaultToggleConfigEnabledCommand,
+			recharge: defaultRechargeConfigCommand,
+			addQuota: defaultAddQuotaCommand,
+			revoke: defaultRevokeConfigCommand
+		},
+		ownerKey = data.reseller.username
+	}: Props = $props();
 
 	const shellSearch = getContext<{ value: string }>('adminShellSearch') ?? { value: '' };
 	let search = $state('');
@@ -95,7 +114,7 @@
 	const pageSize = 8;
 
 	let bookmarks = new SvelteSet<number>();
-	const storageKey = $derived(`skyline:reseller-bookmarks:${data.reseller.username}`);
+	const storageKey = $derived(`skyline:reseller-bookmarks:${ownerKey}`);
 	let loadedKey = $state<string | null>(null);
 
 	let rechargeOpen = $state<number | null>(null);
@@ -326,7 +345,7 @@
 	async function copyUserPage(uuid: string) {
 		try {
 			const url = new URL(
-				resolve(`/user/${uuid}?ri=${encodeURIComponent(data.reseller.username)}`),
+				resolve(`/user/${uuid}?ri=${encodeURIComponent(ownerKey)}`),
 				window.location.origin
 			).toString();
 			await navigator.clipboard.writeText(url);
@@ -338,10 +357,10 @@
 
 	async function handleToggle(request: RequestItem) {
 		try {
-			const result = (await toggleConfigEnabledCommand({
+			const result = (await commands.toggle({
 				id: request.id,
 				enabled: request.status === 'disabled'
-			}).updates(resellerState)) as Record<string, unknown> | null;
+			}).updates(stateTarget)) as Record<string, unknown> | null;
 			if (result?.toggleConfigSuccess) toast.success(result.toggleConfigSuccess as string);
 			if (result?.toggleConfigError) toast.error(result.toggleConfigError as string);
 		} catch (error) {
@@ -352,7 +371,7 @@
 	async function handleRecharge() {
 		if (rechargeOpen === null) return;
 		try {
-			const result = (await rechargeConfigCommand({ id: rechargeOpen }).updates(resellerState)) as
+			const result = (await commands.recharge({ id: rechargeOpen }).updates(stateTarget)) as
 				| Record<string, unknown>
 				| null;
 			if (result?.rechargeSuccess) {
@@ -368,7 +387,7 @@
 	async function handleAddQuota() {
 		if (addQuotaOpen === null) return;
 		try {
-			const result = (await addQuotaCommand({ id: addQuotaOpen, addGb: addQuotaGb }).updates(resellerState)) as
+			const result = (await commands.addQuota({ id: addQuotaOpen, addGb: addQuotaGb }).updates(stateTarget)) as
 				| Record<string, unknown>
 				| null;
 			if (result?.addQuotaSuccess) {
@@ -384,7 +403,7 @@
 	async function handleRevoke() {
 		if (revokeOpen === null) return;
 		try {
-			const result = (await revokeConfigCommand({ id: revokeOpen }).updates(resellerState)) as
+			const result = (await commands.revoke({ id: revokeOpen }).updates(stateTarget)) as
 				| Record<string, unknown>
 				| null;
 			if (result?.revokeSuccess) {
@@ -682,7 +701,7 @@
 													<span>{request.status === 'disabled' ? 'فعال‌سازی' : 'غیرفعال‌سازی'}</span>
 												</button>
 												<a
-													href={resolve(`/user/${request.xuiClientUuid}?ri=${encodeURIComponent(data.reseller.username)}`)}
+													href={resolve(`/user/${request.xuiClientUuid}?ri=${encodeURIComponent(ownerKey)}`)}
 													target="_blank"
 													rel="noreferrer"
 													onclick={closeContextMenu}
@@ -986,7 +1005,7 @@
 							<span>کپی صفحه کاربر</span>
 						</button>
 						<a
-							href={resolve(`/user/${selectedRequest.xuiClientUuid}?ri=${encodeURIComponent(data.reseller.username)}`)}
+							href={resolve(`/user/${selectedRequest.xuiClientUuid}?ri=${encodeURIComponent(ownerKey)}`)}
 							target="_blank"
 							rel="noreferrer"
 							class="va-action-row"
@@ -1055,7 +1074,7 @@
 			<span>{menuRequest.status === 'disabled' ? 'فعال‌سازی' : 'غیرفعال‌سازی'}</span>
 		</button>
 		<a
-			href={resolve(`/user/${menuRequest.xuiClientUuid}?ri=${encodeURIComponent(data.reseller.username)}`)}
+			href={resolve(`/user/${menuRequest.xuiClientUuid}?ri=${encodeURIComponent(ownerKey)}`)}
 			target="_blank"
 			rel="noreferrer"
 			onclick={closeContextMenu}
@@ -1176,7 +1195,7 @@
 					<span>کپی صفحه کاربر</span>
 				</button>
 				<a
-					href={resolve(`/user/${selectedRequest.xuiClientUuid}?ri=${encodeURIComponent(data.reseller.username)}`)}
+					href={resolve(`/user/${selectedRequest.xuiClientUuid}?ri=${encodeURIComponent(ownerKey)}`)}
 					target="_blank"
 					rel="noreferrer"
 					class="va-action-row"
@@ -1214,11 +1233,11 @@
 		<button
 			type="button"
 			class="admin-btn admin-btn-success"
-			disabled={!rechargeRequest?.canRecharge || rechargeConfigCommand.pending > 0}
+			disabled={!rechargeRequest?.canRecharge || commands.recharge.pending > 0}
 			onclick={handleRecharge}
 		>
 			<AnimatedIcon name="cloud" size={14} />
-			<span>{rechargeConfigCommand.pending > 0 ? 'در حال شارژ...' : 'بله، شارژ کن'}</span>
+			<span>{commands.recharge.pending > 0 ? 'در حال شارژ...' : 'بله، شارژ کن'}</span>
 		</button>
 	{/snippet}
 </Modal>
@@ -1245,11 +1264,11 @@
 		<button
 			type="button"
 			class="admin-btn admin-btn-danger"
-			disabled={revokeConfigCommand.pending > 0 || (revokeRequest?.usage?.usedBytes ?? 0) > 0}
+			disabled={commands.revoke.pending > 0 || (revokeRequest?.usage?.usedBytes ?? 0) > 0}
 			onclick={handleRevoke}
 		>
 			<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-			<span>{revokeConfigCommand.pending > 0 ? 'در حال حذف...' : 'بله، حذف کن'}</span>
+			<span>{commands.revoke.pending > 0 ? 'در حال حذف...' : 'بله، حذف کن'}</span>
 		</button>
 	{/snippet}
 </Modal>
@@ -1271,11 +1290,11 @@
 		<button
 			type="button"
 			class="admin-btn admin-btn-success"
-			disabled={addQuotaGb <= 0 || addQuotaCommand.pending > 0}
+			disabled={addQuotaGb <= 0 || commands.addQuota.pending > 0}
 			onclick={handleAddQuota}
 		>
 			<span class="mdi mdi-plus"></span>
-			<span>{addQuotaCommand.pending > 0 ? 'در حال افزایش...' : `بله، ${addQuotaGb} گیگ اضافه کن`}</span>
+			<span>{commands.addQuota.pending > 0 ? 'در حال افزایش...' : `بله، ${addQuotaGb} گیگ اضافه کن`}</span>
 		</button>
 	{/snippet}
 </Modal>
