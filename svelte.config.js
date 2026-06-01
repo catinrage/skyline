@@ -13,7 +13,7 @@ const config = {
 	},
 
 	kit: {
-		adapter: adapter(),
+		adapter: adapter({ bodySize: 256 * 1024 * 1024 }),
 		experimental: {
 			remoteFunctions: true
 		}
