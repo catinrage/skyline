@@ -25,7 +25,8 @@ export function buildResellerNav(
 			badge: options?.pendingIncomingTickets ?? 0
 		},
 		{ id: 'message', label: 'پیام مشتری', icon: 'message', href: `${base}/message`, group: 'مدیریت' },
-		{ id: 'security', label: 'گذرواژه', icon: 'key', href: `${base}/security`, group: 'مدیریت' }
+		{ id: 'security', label: 'گذرواژه', icon: 'key', href: `${base}/security`, group: 'مدیریت' },
+		{ id: 'help', label: 'راهنما', icon: 'help-circle', href: `${base}/help`, group: 'مدیریت' }
 	];
 
 	// Only parent resellers with the sub-reseller management permission get this tab
@@ -52,5 +53,6 @@ export const resellerTabMeta: Record<string, { title: string; subtitle: string }
 	'sub-resellers': { title: 'زیرفروشندگان', subtitle: 'مدیریت زیرفروشندگان، بسته‌های شارژ و درخواست‌های آن‌ها.' },
 	tickets: { title: 'تیکت‌های پشتیبانی', subtitle: 'گفتگو و پیگیری درخواست‌های پشتیبانی.' },
 	message: { title: 'پیام اختصاصی مشتری', subtitle: 'پیامی که فقط برای کاربران ساخته‌شده توسط شما نمایش داده می‌شود.' },
-	security: { title: 'تغییر گذرواژه', subtitle: 'برای امنیت بیشتر گذرواژه پنل فروشنده را به‌روز کنید.' }
+	security: { title: 'تغییر گذرواژه', subtitle: 'برای امنیت بیشتر گذرواژه پنل فروشنده را به‌روز کنید.' },
+	help: { title: 'راهنما', subtitle: 'راهنمای شروع کار، رویه‌های رایج و پرسش‌های متداول پنل فروشنده.' }
 };

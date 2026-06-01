@@ -34,7 +34,8 @@
 		| 'sparkle'
 		| 'check'
 		| 'spark-up'
-		| 'spark-down';
+		| 'spark-down'
+		| 'help-circle';
 
 	type Props = {
 		name: IconName;
@@ -166,6 +167,10 @@
 	{:else if name === 'spark-down'}
 		<path d="M3 7l6 6 4-4 8 9" class="ai-stroke" />
 		<path d="M14 18h7v-7" class="ai-stroke" />
+	{:else if name === 'help-circle'}
+		<circle cx="12" cy="12" r="9" class="ai-stroke" />
+		<path d="M9.5 9.5a3 3 0 0 1 5.5 1c0 2-2.5 2.5-2.5 4" class="ai-stroke ai-draw" stroke-dasharray="16" stroke-dashoffset="16" />
+		<circle cx="12" cy="17" r="0.8" fill="currentColor" stroke="none" class="ai-pulse" />
 	{/if}
 </svg>
 

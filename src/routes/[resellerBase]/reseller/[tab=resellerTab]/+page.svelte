@@ -10,6 +10,7 @@
 	import MessageTab from '$lib/components/admin/reseller/tabs/MessageTab.svelte';
 	import SecurityTab from '$lib/components/admin/reseller/tabs/SecurityTab.svelte';
 	import TelegramTab from '$lib/components/admin/reseller/tabs/TelegramTab.svelte';
+	import HelpTab from '$lib/components/admin/reseller/tabs/HelpTab.svelte';
 
 	const resellerState = getContext('resellerState') as ReturnType<
 		typeof import('../../../reseller/page.remote').getResellerState
@@ -34,6 +35,8 @@
 		<MessageTab data={resellerState.current} {resellerState} />
 	{:else if tab === 'security'}
 		<SecurityTab {resellerState} />
+	{:else if tab === 'help'}
+		<HelpTab />
 	{:else}
 		<OverviewTab data={resellerState.current} />
 	{/if}

@@ -9,7 +9,8 @@ export const resellerTabIds = [
 	'message',
 	'finance',
 	'security',
-	'sub-resellers'
+	'sub-resellers',
+	'help'
 ] as const;
 
 export type ResellerTabId = (typeof resellerTabIds)[number];
