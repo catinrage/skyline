@@ -67,6 +67,7 @@ import {
 	updateResellerPlan,
 	setResellerSubResellerPermission,
 	createAdminVpnConfig,
+	createManagerConfigTemplate,
 	getResellerPlanAccessList,
 	getResellerGroups,
 	createResellerGroup,
@@ -77,6 +78,7 @@ import {
 	addResellerPlanAccess,
 	removeResellerPlanAccess,
 	getAllResellerPlanAccess,
+	deleteManagerConfigTemplate,
 	setResellerClientTicketsEnabled,
 	setResellerTelegramBotAllowed,
 	disconnectResellerTelegramBot,
@@ -86,6 +88,7 @@ import {
 	managerAddQuota,
 	managerExtendDuration,
 	getManagerConfigViews,
+	getManagerConfigTemplates,
 	revokeOwnResellerSession
 } from '$lib/server/resellers';
 import { checkXuiHealth, getVpnDashboardData, getXuiInboundOptions } from '$lib/server/xui';
@@ -272,6 +275,7 @@ async function buildManageState(authenticated: boolean) {
 			resellerCreditRequests: [],
 			resellerPlans: [],
 			managerConfigs: [],
+			managerConfigTemplates: [],
 			backups: [],
 			adminSessions: [],
 			inboundOptions: [],
@@ -331,6 +335,7 @@ async function buildManageState(authenticated: boolean) {
 		planAccessEntries,
 		smtpSettings,
 		managerConfigs,
+		managerConfigTemplates,
 		backups,
 		adminSessions
 	] = await Promise.all([
@@ -365,6 +370,7 @@ async function buildManageState(authenticated: boolean) {
 		getAllResellerPlanAccess(),
 		getSmtpSettings(),
 		getManagerConfigViews(url.origin, url.hostname).catch(() => []),
+		getManagerConfigTemplates().catch(() => []),
 		listStoredBackups(),
 		getAdminSessions(getRequestEvent().cookies)
 	]);
@@ -395,6 +401,7 @@ async function buildManageState(authenticated: boolean) {
 		planAccessEntries,
 		smtpSettings,
 		managerConfigs,
+		managerConfigTemplates,
 		backups,
 		adminSessions
 	};
@@ -1214,7 +1221,8 @@ export const hardDeleteReseller = form(
 			await hardDeleteResellerAccount(id);
 		} catch (error) {
 			return {
-				resellerHardDeleteError: error instanceof Error ? error.message : 'حذف کامل فروشنده انجام نشد.'
+				resellerHardDeleteError:
+					error instanceof Error ? error.message : 'حذف کامل فروشنده انجام نشد.'
 			};
 		}
 
@@ -1654,15 +1662,14 @@ export const toggleResellerSubPermission = form(
 export const createAdminConfigCommand = command(
 	z.object({
 		inboundId: z.number().int().positive('سرور انتخاب نشده است.'),
-		quotaGb: z
-			.number()
-			.min(0.01, 'حجم باید حداقل ۰.۰۱ گیگابایت باشد.')
-			.positive(),
+		quotaGb: z.number().min(0.01, 'حجم باید حداقل ۰.۰۱ گیگابایت باشد.').positive(),
 		durationDays: z
 			.number()
 			.int('مدت باید عدد صحیح باشد.')
 			.min(1, 'مدت باید حداقل ۱ روز باشد.')
-			.max(3650, 'مدت نمی‌تواند بیشتر از ۳۶۵۰ روز باشد.'),
+			.max(365, 'مدت نمی‌تواند بیشتر از ۳۶۵ روز باشد.'),
+		priceToman: z.number().int('قیمت باید عدد صحیح باشد.').min(0, 'قیمت نمی‌تواند منفی باشد.'),
+		templateId: z.number().int().positive().nullable().optional(),
 		customerLabel: z.string().trim().max(64, 'نام مشتری نمی‌تواند بیشتر از ۶۴ کاراکتر باشد.'),
 		internalNote: z
 			.string()
@@ -1670,7 +1677,15 @@ export const createAdminConfigCommand = command(
 			.max(500, 'یادداشت نمی‌تواند بیشتر از ۵۰۰ کاراکتر باشد.')
 			.optional()
 	}),
-	async ({ inboundId, quotaGb, durationDays, customerLabel, internalNote }) => {
+	async ({
+		inboundId,
+		quotaGb,
+		durationDays,
+		priceToman,
+		templateId,
+		customerLabel,
+		internalNote
+	}) => {
 		const cookies = await requireAdminSession();
 
 		if (!cookies) {
@@ -1683,7 +1698,7 @@ export const createAdminConfigCommand = command(
 
 		try {
 			const request = await createAdminVpnConfig(
-				{ inboundId, quotaGb, durationDays, customerLabel, internalNote },
+				{ inboundId, quotaGb, durationDays, priceToman, templateId, customerLabel, internalNote },
 				url.origin,
 				url.hostname
 			);
@@ -1696,6 +1711,69 @@ export const createAdminConfigCommand = command(
 		} catch (error) {
 			return {
 				adminCreateError: error instanceof Error ? error.message : 'ساخت کانفیگ انجام نشد.'
+			};
+		}
+	}
+);
+
+export const createManagerTemplateCommand = command(
+	z.object({
+		name: z.string().trim().max(64, 'نام قالب نمی‌تواند بیشتر از ۶۴ کاراکتر باشد.').optional(),
+		quotaGb: z.number().min(0.01, 'حجم قالب باید حداقل ۰.۰۱ گیگابایت باشد.').positive(),
+		durationDays: z
+			.number()
+			.int('مدت باید عدد صحیح باشد.')
+			.min(1, 'مدت قالب باید حداقل ۱ روز باشد.')
+			.max(365, 'مدت قالب نمی‌تواند بیشتر از ۳۶۵ روز باشد.'),
+		priceToman: z.number().int('قیمت باید عدد صحیح باشد.').min(0, 'قیمت نمی‌تواند منفی باشد.')
+	}),
+	async ({ name, quotaGb, durationDays, priceToman }) => {
+		const cookies = await requireAdminSession();
+
+		if (!cookies) {
+			return {
+				templateError: 'نشست شما منقضی شده است. دوباره وارد شوید.'
+			};
+		}
+
+		try {
+			await createManagerConfigTemplate({ name, quotaGb, durationDays, priceToman });
+			await getManageState().set(await buildManageState(true));
+
+			return {
+				templateSuccess: 'قالب سریع ذخیره شد.'
+			};
+		} catch (error) {
+			return {
+				templateError: error instanceof Error ? error.message : 'ذخیره قالب انجام نشد.'
+			};
+		}
+	}
+);
+
+export const deleteManagerTemplateCommand = command(
+	z.object({
+		id: z.number().int().positive()
+	}),
+	async ({ id }) => {
+		const cookies = await requireAdminSession();
+
+		if (!cookies) {
+			return {
+				templateError: 'نشست شما منقضی شده است. دوباره وارد شوید.'
+			};
+		}
+
+		try {
+			await deleteManagerConfigTemplate(id);
+			await getManageState().set(await buildManageState(true));
+
+			return {
+				templateSuccess: 'قالب حذف شد.'
+			};
+		} catch (error) {
+			return {
+				templateError: error instanceof Error ? error.message : 'حذف قالب انجام نشد.'
 			};
 		}
 	}
@@ -1892,8 +1970,7 @@ export const forceDisconnectTelegramBot = form(
 			return { telegramBotPermissionSuccess: 'بات فروشنده قطع شد.' };
 		} catch (error) {
 			return {
-				telegramBotPermissionError:
-					error instanceof Error ? error.message : 'قطع بات انجام نشد.'
+				telegramBotPermissionError: error instanceof Error ? error.message : 'قطع بات انجام نشد.'
 			};
 		}
 	}

@@ -2634,11 +2634,7 @@ export async function getTelegramOrdersByResellerId(resellerId: number) {
 		 WHERE reseller_id = ?
 		   AND status = 'awaiting_receipt'
 		   AND created_at <= ?`,
-		[
-			nowSeconds(),
-			resellerId,
-			nowSeconds() - settings.telegramBotDraftExpiryMinutes * 60
-		]
+		[nowSeconds(), resellerId, nowSeconds() - settings.telegramBotDraftExpiryMinutes * 60]
 	);
 	const rows = await queryAll<TelegramBotOrderRow>(
 		`SELECT id, reseller_id, bot_id, telegram_user_id, telegram_username, customer_name,
@@ -3046,9 +3042,12 @@ export async function connectResellerTelegramBot(
 	await ensureResellerTables();
 	const account = await getResellerAccountById(resellerId);
 	if (!account || account.is_active !== 1) throw new Error('حساب فروشنده فعال نیست.');
-	if (account.parent_reseller_id !== null) throw new Error('زیرفروشنده نمی‌تواند بات تلگرام وصل کند.');
-	if (account.telegram_bot_allowed !== 1) throw new Error('مجوز بات تلگرام برای این فروشنده فعال نیست.');
-	if (!(await isFeatureEnabled('telegram_sales_bot'))) throw new Error('قابلیت بات تلگرام غیرفعال است.');
+	if (account.parent_reseller_id !== null)
+		throw new Error('زیرفروشنده نمی‌تواند بات تلگرام وصل کند.');
+	if (account.telegram_bot_allowed !== 1)
+		throw new Error('مجوز بات تلگرام برای این فروشنده فعال نیست.');
+	if (!(await isFeatureEnabled('telegram_sales_bot')))
+		throw new Error('قابلیت بات تلگرام غیرفعال است.');
 	if (!hasTelegramTokenSecret()) {
 		throw new Error('TELEGRAM_BOT_TOKEN_SECRET باید قبل از اتصال بات تنظیم شود.');
 	}
@@ -3122,7 +3121,10 @@ export async function disconnectResellerTelegramBot(resellerId: number) {
 	if (!row) return;
 	try {
 		const settings = await getFeatureSettings();
-		await deleteTelegramWebhook(decryptTelegramToken(row.token_encrypted), settings.telegramBotSocksProxyUrl);
+		await deleteTelegramWebhook(
+			decryptTelegramToken(row.token_encrypted),
+			settings.telegramBotSocksProxyUrl
+		);
 	} catch (error) {
 		resellerLogger.warn('Failed to delete Telegram webhook while disconnecting bot.', {
 			resellerId,
@@ -3145,11 +3147,8 @@ export async function syncResellerTelegramBotStatus(resellerId: number) {
 		info.url !== row.webhook_url
 			? 'وبهوک ثبت‌شده در تلگرام با آدرس ذخیره‌شده Skyline یکی نیست. بات را دوباره متصل کنید.'
 			: (info.last_error_message ?? (row.status === 'error' ? (row.last_error ?? '') : ''));
-	const nextStatus: TelegramBotStatus = row.status === 'paused' || row.status === 'disabled'
-		? row.status
-		: issue
-			? 'error'
-			: 'active';
+	const nextStatus: TelegramBotStatus =
+		row.status === 'paused' || row.status === 'disabled' ? row.status : issue ? 'error' : 'active';
 	await run(
 		`UPDATE reseller_telegram_bots
 		 SET status = ?, last_error = ?, updated_at = ?
@@ -3170,13 +3169,19 @@ async function getDefaultTelegramInbound(account: ResellerAccountRow) {
 	return inbound?.id ?? 0;
 }
 
-async function assertTelegramOrderLimits(quotaGb: number, durationDays: number, priceToman: number) {
+async function assertTelegramOrderLimits(
+	quotaGb: number,
+	durationDays: number,
+	priceToman: number
+) {
 	const settings = await getFeatureSettings();
 	if (quotaGb <= 0 || quotaGb > settings.telegramBotMaxCustomQuotaGb) {
 		throw new Error(`حجم سفارش باید بین ۱ تا ${settings.telegramBotMaxCustomQuotaGb} گیگ باشد.`);
 	}
 	if (durationDays < 1 || durationDays > settings.telegramBotMaxCustomDurationDays) {
-		throw new Error(`مدت سفارش باید بین ۱ تا ${settings.telegramBotMaxCustomDurationDays} روز باشد.`);
+		throw new Error(
+			`مدت سفارش باید بین ۱ تا ${settings.telegramBotMaxCustomDurationDays} روز باشد.`
+		);
 	}
 	if (priceToman < settings.telegramBotMinCustomPriceToman) {
 		throw new Error('قیمت سفارش از حداقل تعیین‌شده مدیر کمتر است.');
@@ -3344,7 +3349,12 @@ export async function reviewTelegramBotOrder(
 			`UPDATE telegram_bot_orders SET status = 'rejected', reseller_note = ?, reviewed_at = ?, updated_at = ? WHERE id = ?`,
 			[note.trim().slice(0, 500), now, now, order.id]
 		);
-		await sendTelegramMessage(token, order.telegramUserId, 'سفارش شما توسط فروشنده رد شد.', settings.telegramBotSocksProxyUrl).catch(() => undefined);
+		await sendTelegramMessage(
+			token,
+			order.telegramUserId,
+			'سفارش شما توسط فروشنده رد شد.',
+			settings.telegramBotSocksProxyUrl
+		).catch(() => undefined);
 		return;
 	}
 
@@ -3396,7 +3406,12 @@ export async function reviewTelegramBotOrder(
 		.join('\n\n');
 
 	try {
-		await sendTelegramMessage(token, order.telegramUserId, message, settings.telegramBotSocksProxyUrl);
+		await sendTelegramMessage(
+			token,
+			order.telegramUserId,
+			message,
+			settings.telegramBotSocksProxyUrl
+		);
 		await run(
 			`UPDATE telegram_bot_orders SET status = 'approved', delivered_at = ?, delivery_error = '', updated_at = ? WHERE id = ?`,
 			[nowSeconds(), nowSeconds(), order.id]
@@ -3404,7 +3419,11 @@ export async function reviewTelegramBotOrder(
 	} catch (error) {
 		await run(
 			`UPDATE telegram_bot_orders SET status = 'delivery_failed', delivery_error = ?, updated_at = ? WHERE id = ?`,
-			[error instanceof Error ? error.message.slice(0, 500) : 'ارسال تلگرام ناموفق بود.', nowSeconds(), order.id]
+			[
+				error instanceof Error ? error.message.slice(0, 500) : 'ارسال تلگرام ناموفق بود.',
+				nowSeconds(),
+				order.id
+			]
 		);
 	}
 }
@@ -4461,6 +4480,26 @@ export async function getManagerConfigViews(origin: string, fallbackHost?: strin
 	);
 }
 
+export async function getManagerConfigTemplates() {
+	const manager = await getOrCreateManagerSystemAccount();
+	return getResellerConfigTemplatesByResellerId(manager.id);
+}
+
+export async function createManagerConfigTemplate(input: {
+	name?: string;
+	quotaGb: number;
+	durationDays: number;
+	priceToman: number;
+}) {
+	const manager = await getOrCreateManagerSystemAccount();
+	await createResellerConfigTemplate(manager.id, input);
+}
+
+export async function deleteManagerConfigTemplate(templateId: number) {
+	const manager = await getOrCreateManagerSystemAccount();
+	await deleteResellerConfigTemplate(manager.id, templateId);
+}
+
 /**
  * Create a VPN config directly for the manager's internal seller account.
  */
@@ -4469,6 +4508,8 @@ export async function createAdminVpnConfig(
 		inboundId: number;
 		quotaGb: number;
 		durationDays: number;
+		priceToman: number;
+		templateId?: number | null;
 		customerLabel: string;
 		internalNote?: string;
 	},
@@ -4477,10 +4518,32 @@ export async function createAdminVpnConfig(
 ) {
 	await ensureResellerTables();
 
-	const { inboundId, quotaGb, durationDays, customerLabel, internalNote } = input;
+	const { inboundId, quotaGb, durationDays, priceToman, templateId, customerLabel, internalNote } =
+		input;
 	const manager = await getOrCreateManagerSystemAccount();
+	const inbound = (await getXuiInboundOptions()).find(
+		(item) => item.id === inboundId && item.enable
+	);
 
-	const values = validateTemplateValues({ quotaGb, durationDays, priceToman: 0 });
+	if (!inbound) {
+		throw new Error('سرور انتخاب‌شده در دسترس نیست.');
+	}
+
+	const selectedTemplate = templateId
+		? await getResellerConfigTemplateById(manager.id, templateId)
+		: null;
+
+	if (templateId && !selectedTemplate) {
+		throw new Error('قالب انتخاب‌شده پیدا نشد.');
+	}
+
+	const values = selectedTemplate
+		? {
+				quotaGb: selectedTemplate.quotaGb,
+				durationDays: selectedTemplate.durationDays,
+				priceToman: selectedTemplate.priceToman
+			}
+		: validateTemplateValues({ quotaGb, durationDays, priceToman });
 	const normalizedLabel = normalizeCustomerLabel(customerLabel);
 	const displayLabel = normalizedLabel || 'کانفیگ مدیر';
 	const uuid = crypto.randomUUID();
@@ -4512,9 +4575,10 @@ export async function createAdminVpnConfig(
 				xui_email, xui_client_uuid, xui_inbound_id,
 				quota_gb_snapshot, duration_days_snapshot, price_toman_snapshot,
 				created_at, revoked_at, settled_amount_toman, settled_payment_id
-			) VALUES (?, 0, NULL, ?, ?, ?, ?, ?, ?, ?, 0, ?, NULL, 0, NULL)`,
+			) VALUES (?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, NULL)`,
 			[
 				manager.id,
+				selectedTemplate?.id ?? null,
 				displayLabel,
 				internalNote ?? '',
 				xuiEmail,
@@ -4522,6 +4586,7 @@ export async function createAdminVpnConfig(
 				inboundId,
 				values.quotaGb,
 				values.durationDays,
+				values.priceToman,
 				now
 			]
 		);
@@ -4923,7 +4988,9 @@ export async function addQuotaToResellerRequest(
 		const liveAfter = await getVpnClientUsageMap(fallbackHost, { includeOnlineStatus: true });
 
 		if (!liveAfter.get(request.xuiClientUuid)) {
-			throw new Error('افزایش حجم در x-ui انجام شد اما بازیابی کانفیگ ناموفق بود. با مدیر تماس بگیرید.');
+			throw new Error(
+				'افزایش حجم در x-ui انجام شد اما بازیابی کانفیگ ناموفق بود. با مدیر تماس بگیرید.'
+			);
 		}
 
 		try {

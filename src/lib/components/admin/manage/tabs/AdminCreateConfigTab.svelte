@@ -3,10 +3,28 @@
 	import AnimatedIcon from '$lib/components/admin/AnimatedIcon.svelte';
 	import EmptyState from '$lib/components/admin/EmptyState.svelte';
 	import InspectorPortal from '$lib/components/admin/InspectorPortal.svelte';
-	import Modal from '$lib/components/admin/Modal.svelte';
-	import { createAdminConfigCommand } from '../../../../../routes/manage/page.remote';
+	import ConfigCreatePanel from '$lib/components/admin/shared/ConfigCreatePanel.svelte';
+	import { formatToman } from '$lib/utils/format';
+	import {
+		createAdminConfigCommand,
+		createManagerTemplateCommand,
+		deleteManagerTemplateCommand
+	} from '../../../../../routes/manage/page.remote';
 
-	type InboundOption = { id: number; remark: string | null };
+	type InboundOption = {
+		id: number;
+		remark: string | null;
+		protocol?: string | null;
+		port?: number | null;
+		enable?: boolean;
+	};
+	type Template = {
+		id: number;
+		name: string;
+		quotaGb: number;
+		durationDays: number;
+		priceToman: number;
+	};
 	type Config = {
 		id: number;
 		customerLabel: string;
@@ -15,32 +33,33 @@
 		xuiInboundId: number;
 		quotaGbSnapshot: number;
 		durationDaysSnapshot: number;
+		priceTomanSnapshot: number;
 		createdAt: number;
 		status: string;
 		configUrl: string | null;
 	};
-	type Props = { data: { inboundOptions: InboundOption[]; managerConfigs: Config[] }; manageState: any };
+	type Props = {
+		data: { inboundOptions: InboundOption[]; managerConfigTemplates: Template[]; managerConfigs: Config[] };
+		manageState: any;
+	};
 
 	let { data, manageState }: Props = $props();
 	let selectedId = $state<number | null>(null);
-	let modalOpen = $state(false);
-	let inboundId = $state<number | null>(null);
-	let quotaGb = $state(10);
-	let durationDays = $state(30);
-	let customerLabel = $state('');
-	let internalNote = $state('');
 	let page = $state(1);
 	const pageSize = 10;
 	const totalPages = $derived(Math.max(1, Math.ceil(data.managerConfigs.length / pageSize)));
 	const visible = $derived(data.managerConfigs.slice((page - 1) * pageSize, page * pageSize));
+	const availableInbounds = $derived(data.inboundOptions.filter((inbound) => inbound.enable !== false));
+	const createData = $derived({
+		salesEnabled: true,
+		stats: { gbBalance: Number.MAX_SAFE_INTEGER, totalGbSold: 0 },
+		templates: data.managerConfigTemplates,
+		availableInbounds
+	});
 	const selected = $derived(
 		(selectedId === null ? null : data.managerConfigs.find((config) => config.id === selectedId)) ??
 			data.managerConfigs[0] ??
 			null
-	);
-	const canCreate = $derived(
-		inboundId !== null && Number.isFinite(quotaGb) && quotaGb >= 0.01 &&
-			Number.isInteger(durationDays) && durationDays > 0
 	);
 
 	function formatDate(timestamp: number) {
@@ -51,24 +70,18 @@
 		await navigator.clipboard.writeText(value);
 		toast.success('کپی شد.');
 	}
-
-	async function handleCreate() {
-		if (!canCreate || inboundId === null) return;
-		const result = (await createAdminConfigCommand({
-			inboundId, quotaGb, durationDays, customerLabel, internalNote
-		}).updates(manageState)) as Record<string, unknown> | null;
-		if (result?.adminCreateError) {
-			toast.error(String(result.adminCreateError));
-			return;
-		}
-		toast.success('کانفیگ مدیر ساخته شد.');
-		customerLabel = '';
-		internalNote = '';
-		modalOpen = false;
-	}
 </script>
 
 <InspectorPortal content={managerConfigInspector} />
+
+<ConfigCreatePanel
+	mode="manager"
+	data={createData}
+	stateTarget={manageState}
+	createCommand={createAdminConfigCommand}
+	createTemplateCommand={createManagerTemplateCommand}
+	deleteTemplateCommand={deleteManagerTemplateCommand}
+/>
 
 <section class="va-card manager-configs">
 	<div class="section-head">
@@ -76,9 +89,6 @@
 			<div class="section-title">کانفیگ‌های مدیر</div>
 			<div class="section-sub">این کانفیگ‌ها متعلق به حساب داخلی مدیر هستند و موجودی فروشندگان را مصرف نمی‌کنند.</div>
 		</div>
-		<button type="button" class="admin-btn admin-btn-primary" onclick={() => (modalOpen = true)}>
-			<AnimatedIcon name="plus-network" size={13} /><span>کانفیگ جدید</span>
-		</button>
 	</div>
 	{#if data.managerConfigs.length === 0}
 		<EmptyState title="کانفیگی ساخته نشده" description="برای ساخت کانفیگ مشتری مدیر از دکمه بالا استفاده کنید." icon="inbox" />
@@ -118,6 +128,7 @@
 			<div class="detail-row"><span>ایمیل</span><strong dir="ltr">{selected.xuiEmail}</strong></div>
 			<div class="detail-row"><span>حجم</span><strong>{selected.quotaGbSnapshot} GB</strong></div>
 			<div class="detail-row"><span>مدت</span><strong>{selected.durationDaysSnapshot} روز</strong></div>
+			<div class="detail-row"><span>قیمت فروش</span><strong>{formatToman(selected.priceTomanSnapshot)} تومان</strong></div>
 			<div class="detail-row"><span>تاریخ</span><strong>{formatDate(selected.createdAt)}</strong></div>
 			{#if selected.configUrl}
 				<button type="button" class="admin-btn admin-btn-primary full" onclick={() => copy(selected.configUrl!)}>کپی کانفیگ</button>
@@ -129,20 +140,8 @@
 </aside>
 {/snippet}
 
-<Modal open={modalOpen} title="کانفیگ جدید مدیر" eyebrow="مالک داخلی مدیر" onClose={() => (modalOpen = false)}>
-	<div class="modal-form">
-		<label>سرور<select class="admin-field" bind:value={inboundId}><option value={null}>انتخاب سرور</option>{#each data.inboundOptions as inbound (inbound.id)}<option value={inbound.id}>{inbound.remark || `Inbound #${inbound.id}`}</option>{/each}</select></label>
-		<div class="grid"><label>حجم<input class="admin-field" type="number" min="0.01" step="0.01" bind:value={quotaGb} /></label><label>مدت<input class="admin-field" type="number" min="1" bind:value={durationDays} /></label></div>
-		<label>نام مشتری<input class="admin-field" type="text" bind:value={customerLabel} /></label>
-		<label>یادداشت داخلی<textarea class="admin-field" bind:value={internalNote}></textarea></label>
-		<button class="admin-btn admin-btn-primary full" type="button" disabled={!canCreate || createAdminConfigCommand.pending > 0} onclick={handleCreate}>
-			{createAdminConfigCommand.pending > 0 ? 'در حال ساخت...' : 'ساخت کانفیگ'}
-		</button>
-	</div>
-</Modal>
-
 <style>
-	.manager-configs { overflow: hidden; padding: 0; }
+	.manager-configs { margin-top: 18px; overflow: hidden; padding: 0; }
 	.section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; border-bottom: 1px solid var(--va-border); }
 	.section-title { color: var(--va-text); font-size: 14px; font-weight: 700; }
 	.section-sub { color: var(--va-text-faint); font-size: 11px; margin-top: 4px; }
@@ -151,9 +150,5 @@
 	.pagination-controls { display: flex; gap: 6px; }
 	.detail-row { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--va-border); font-size: 12px; }
 	h3 { margin: 0 0 10px; font-size: 15px; }
-	.modal-form { display: grid; gap: 12px; }
-	.modal-form label { display: grid; gap: 6px; color: var(--va-text-muted); font-size: 12px; }
-	.modal-form textarea { min-height: 70px; resize: vertical; }
-	.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 	.full { width: 100%; justify-content: center; }
 </style>
