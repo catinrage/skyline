@@ -12,7 +12,7 @@
 	type IconName = 'dashboard' | 'traffic' | 'message' | 'apps' | 'cloud' | 'shield' | 'store' |
 		'ticket' | 'database' | 'key' | 'toggle' | 'flag' | 'logout' | 'overview' | 'plus-network' |
 		'list' | 'finance' | 'search' | 'bell' | 'sun' | 'moon' | 'menu' | 'chevron-left' | 'sparkle' |
-		'check' | 'spark-up' | 'spark-down';
+		'check' | 'spark-up' | 'spark-down' | 'help-circle';
 
 	export type NavItem = {
 		id: string;
@@ -77,6 +77,7 @@
 	let theme = $state<ThemeMode>('dark');
 	let sidebarOpen = $state(false);
 	let commandOpen = $state(false);
+	let profileMenuOpen = $state(false);
 	let searchValue = $state('');
 	let selectedCommandIndex = $state(0);
 	let commandInput = $state<HTMLInputElement | null>(null);
@@ -336,28 +337,6 @@
 					{/each}
 				</nav>
 
-				<div class="sidebar-footer">
-					{#if userName}
-						<div class="sidebar-user">
-							<div class="sidebar-avatar" aria-hidden="true">
-								{userName.slice(0, 1).toUpperCase()}
-							</div>
-							<div class="sidebar-user-meta">
-								<p class="sidebar-user-name">{userName}</p>
-								{#if userMeta}
-									<p class="sidebar-user-sub">{userMeta}</p>
-								{/if}
-							</div>
-						</div>
-					{/if}
-
-					{#if onLogout}
-						<button type="button" class="admin-btn admin-btn-ghost sidebar-logout" onclick={onLogout}>
-							<AnimatedIcon name="logout" size={18} />
-							<span>خروج</span>
-						</button>
-					{/if}
-				</div>
 			</div>
 		</aside>
 
@@ -414,10 +393,6 @@
 							<AnimatedIcon name="search" size={20} />
 						</button>
 
-						<button type="button" class="header-icon-btn" aria-label="اعلان‌ها">
-							<AnimatedIcon name="bell" size={20} />
-						</button>
-
 						<button
 							type="button"
 							class="header-icon-btn"
@@ -433,9 +408,45 @@
 
 						{#if userName}
 							<div class="header-user">
-								<div class="sidebar-avatar header-avatar" aria-hidden="true">
+								<button
+									type="button"
+									class="sidebar-avatar header-avatar header-avatar-btn"
+									aria-label="منوی کاربر"
+									aria-expanded={profileMenuOpen}
+									onclick={() => (profileMenuOpen = !profileMenuOpen)}
+								>
 									{userName.slice(0, 1).toUpperCase()}
-								</div>
+								</button>
+								{#if profileMenuOpen}
+									<div class="profile-menu" role="menu">
+										<div class="profile-menu-user">
+											<div class="sidebar-avatar profile-menu-avatar" aria-hidden="true">
+												{userName.slice(0, 1).toUpperCase()}
+											</div>
+											<div class="profile-menu-meta">
+												<span class="profile-menu-name">{userName}</span>
+												{#if userMeta}<span class="profile-menu-sub">{userMeta}</span>{/if}
+											</div>
+										</div>
+										{#if onLogout}
+											<div class="profile-menu-divider"></div>
+											<button
+												type="button"
+												class="profile-menu-logout"
+												onclick={() => { profileMenuOpen = false; onLogout?.(); }}
+											>
+												<AnimatedIcon name="logout" size={15} />
+												<span>خروج از حساب</span>
+											</button>
+										{/if}
+									</div>
+									<button
+										type="button"
+										class="profile-menu-backdrop"
+										aria-label="بستن منوی کاربر"
+										onclick={() => (profileMenuOpen = false)}
+									></button>
+								{/if}
 							</div>
 						{/if}
 					</div>
@@ -490,24 +501,6 @@
 			</div>
 		</div>
 
-		<nav class="mobile-bottom-nav" aria-label="ناوبری موبایل">
-			{#each navItems as item (item.id)}
-				{@const isActive = item.id === activeId}
-				<a
-					href={item.href}
-					class="mobile-bottom-item"
-					class:is-active={isActive}
-					aria-label={item.label}
-					aria-current={isActive ? 'page' : undefined}
-					onclick={(event) => handleNavClick(event, item.href)}
-				>
-					<AnimatedIcon name={item.icon} size={20} active={isActive} />
-					{#if item.badge}
-						<span class="mobile-bottom-badge">{item.badge}</span>
-					{/if}
-				</a>
-			{/each}
-		</nav>
 	</div>
 
 	{#if commandOpen}
@@ -777,24 +770,6 @@
 		border-color: transparent;
 	}
 
-	.sidebar-footer {
-		display: flex;
-		flex-direction: column;
-		gap: 0.55rem;
-		padding-top: 0.75rem;
-		border-top: 1px solid var(--admin-border);
-	}
-
-	.sidebar-user {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		padding: 0.5rem 0.55rem;
-		border-radius: 0.45rem;
-		background: var(--admin-surface-soft);
-		border: 1px solid var(--admin-border);
-	}
-
 	.sidebar-avatar {
 		width: 30px; height: 30px;
 		border-radius: 0.35rem;
@@ -806,27 +781,6 @@
 		font-size: 0.8rem;
 		flex-shrink: 0;
 	}
-
-	.sidebar-user-meta { min-width: 0; flex: 1; }
-	.sidebar-user-name {
-		color: var(--admin-text-strong);
-		font-weight: 600;
-		font-size: 0.85rem;
-		margin: 0;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.sidebar-user-sub {
-		color: var(--admin-text-faint);
-		font-size: 0.7rem;
-		margin: 0;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.sidebar-logout { justify-content: center; width: 100%; }
 
 	/* ============= HEADER ============= */
 
@@ -954,8 +908,96 @@
 		display: none;
 	}
 
-	.header-user { display: flex; align-items: center; }
+	.header-user { display: flex; align-items: center; position: relative; }
 	.header-avatar { width: 32px; height: 32px; font-size: 0.82rem; }
+	.header-avatar-btn {
+		cursor: pointer;
+		transition: opacity 0.2s ease, transform 0.2s ease;
+	}
+	.header-avatar-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+
+	.profile-menu {
+		position: absolute;
+		top: calc(100% + 8px);
+		inset-inline-end: 0;
+		min-width: 200px;
+		background: var(--admin-card);
+		border: 1px solid var(--admin-border-strong);
+		border-radius: 0.65rem;
+		box-shadow: var(--admin-shadow-pop);
+		z-index: 60;
+		overflow: hidden;
+		animation: command-pop 120ms ease-out both;
+	}
+
+	.profile-menu-user {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		padding: 0.75rem 0.85rem;
+	}
+
+	.profile-menu-avatar { width: 30px; height: 30px; font-size: 0.8rem; }
+
+	.profile-menu-meta {
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
+		min-width: 0;
+	}
+
+	.profile-menu-name {
+		font-size: 0.84rem;
+		font-weight: 650;
+		color: var(--admin-text-strong);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.profile-menu-sub {
+		font-size: 0.7rem;
+		color: var(--admin-text-faint);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.profile-menu-divider {
+		height: 1px;
+		background: var(--admin-border);
+		margin: 0;
+	}
+
+	.profile-menu-logout {
+		display: flex;
+		align-items: center;
+		gap: 0.55rem;
+		width: 100%;
+		padding: 0.65rem 0.85rem;
+		background: transparent;
+		border: 0;
+		color: var(--va-danger);
+		font-size: 0.82rem;
+		font-weight: 550;
+		cursor: pointer;
+		font-family: inherit;
+		text-align: start;
+		transition: background-color 0.15s ease;
+	}
+
+	.profile-menu-logout:hover {
+		background: color-mix(in srgb, var(--va-danger) 8%, transparent);
+	}
+
+	.profile-menu-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 59;
+		background: transparent;
+		border: 0;
+		cursor: default;
+	}
 
 	/* ============= CONTENT ============= */
 
@@ -1011,10 +1053,6 @@
 		z-index: 35;
 		display: none;
 		border: 0;
-	}
-
-	.mobile-bottom-nav {
-		display: none;
 	}
 
 	.command-backdrop {
@@ -1233,7 +1271,7 @@
 		.sidebar-backdrop { display: block; }
 		.sidebar-collapse { display: inline-flex; }
 		.header-menu { display: inline-flex; }
-		.admin-content { padding: 1rem 1rem 5.75rem; gap: 1rem; }
+		.admin-content { padding: 1rem 1rem 2rem; gap: 1rem; }
 		.admin-header-inner { padding: 0 1rem; }
 		.page-title { font-size: 1.15rem; }
 		.header-search { display: none; }
@@ -1241,15 +1279,6 @@
 	}
 
 	@media (max-width: 767px) {
-		.admin-sidebar,
-		.sidebar-backdrop {
-			display: none;
-		}
-
-		.header-menu {
-			display: none;
-		}
-
 		.header-right {
 			gap: 0.35rem;
 		}
@@ -1260,32 +1289,12 @@
 		}
 
 		.admin-content {
-			padding: 0.9rem 0.8rem calc(5.8rem + env(safe-area-inset-bottom));
-		}
-
-		.mobile-bottom-nav {
-			position: fixed;
-			inset-inline: 0;
-			bottom: 0;
-			z-index: 55;
-			display: flex;
-			align-items: center;
-			gap: 0.25rem;
-			overflow-x: auto;
-			overscroll-behavior-x: contain;
-			scrollbar-width: none;
-			background: var(--admin-surface-strong);
-			border-top: 1px solid var(--admin-border);
-			padding: 0.45rem 0.55rem calc(0.45rem + env(safe-area-inset-bottom));
-		}
-
-		.mobile-bottom-nav::-webkit-scrollbar {
-			display: none;
+			padding: 0.9rem 0.8rem 2rem;
 		}
 
 		.command-backdrop {
 			place-items: end center;
-			padding: 0.75rem 0.75rem calc(4.75rem + env(safe-area-inset-bottom));
+			padding: 0.75rem;
 		}
 
 		.command-palette {
@@ -1300,51 +1309,6 @@
 		.command-search-row {
 			gap: 0.55rem;
 			padding: 0.75rem;
-		}
-
-		.mobile-bottom-item {
-			position: relative;
-			min-width: 48px;
-			height: 42px;
-			display: grid;
-			place-items: center;
-			border-radius: 0.45rem;
-			color: var(--admin-text-faint);
-			border: 1px solid transparent;
-			text-decoration: none;
-			flex: 0 0 auto;
-		}
-
-		.mobile-bottom-item.is-active {
-			color: var(--admin-text);
-			background: var(--admin-surface-soft);
-			border-color: var(--admin-border-strong);
-		}
-
-		.mobile-bottom-item.is-active::before {
-			content: '';
-			position: absolute;
-			top: -0.45rem;
-			width: 18px;
-			height: 2px;
-			border-radius: 999px;
-			background: var(--admin-accent);
-		}
-
-		.mobile-bottom-badge {
-			position: absolute;
-			top: 0.2rem;
-			inset-inline-end: 0.38rem;
-			min-width: 14px;
-			height: 14px;
-			border-radius: 999px;
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			padding-inline: 0.25rem;
-			background: var(--admin-accent);
-			color: #fff;
-			font: 600 0.58rem var(--va-font-mono);
 		}
 	}
 </style>
