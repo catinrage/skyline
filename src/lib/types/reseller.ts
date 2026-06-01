@@ -37,6 +37,11 @@ export interface ResellerCreditPackage {
 	updatedAt: number;
 }
 
+export interface PaymentCardSettings {
+	cardNumber: string;
+	cardOwnerName: string;
+}
+
 export interface ResellerConfigTemplate {
 	id: number;
 	resellerId: number;
@@ -467,11 +472,13 @@ export interface ResellerDashboardState {
 		debtCapToman: number | null;
 		clientTicketsEnabled: boolean;
 		telegramBotAllowed: boolean;
+		paymentCard: PaymentCardSettings;
 		subResellerLimit: number;
 		group: ResellerGroup | null;
 	};
 	stats: ResellerStats;
 	dailySummary: ResellerDailySummary;
+	paymentCard: PaymentCardSettings;
 	salesEnabled: boolean;
 	availableInbounds: Array<{ id: number; remark: string | null; protocol: string | null; port: number | null }>;
 	templates: ResellerConfigTemplate[];

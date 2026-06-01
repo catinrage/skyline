@@ -17,6 +17,7 @@
 		updateSubPackageCommand,
 		setSubPackageActiveCommand,
 		deleteSubPackageCommand,
+		updateResellerPaymentCardCommand,
 		reviewSubCreditRequestCommand
 	} from '../../../../../routes/reseller/page.remote';
 
@@ -58,7 +59,10 @@
 	type Props = {
 		data: {
 			stats: { gbBalance: number };
-			reseller: { subResellerLimit: number };
+			reseller: {
+				subResellerLimit: number;
+				paymentCard?: { cardNumber: string; cardOwnerName: string };
+			};
 			subResellers: SubReseller[];
 			subPackages: SubPackage[];
 			subCreditRequests: SubCreditRequest[];
@@ -88,6 +92,8 @@
 	let editingPackage = $state<SubPackage | null>(null);
 	let pkgQuotaGb = $state(10);
 	let pkgPriceToman = $state(0);
+	let cardNumber = $state('');
+	let cardOwnerName = $state('');
 
 	// ── credit requests ───────────────────────────────────────────────────────
 	let selectedRequestId = $state<number | null>(null);
@@ -120,6 +126,7 @@
 	const visibleSubs = $derived(data.subResellers.slice((resellerPage - 1) * pageSize, resellerPage * pageSize));
 	const visiblePackages = $derived(data.subPackages.slice((packagePage - 1) * pageSize, packagePage * pageSize));
 	const subResellerLimit = $derived(data.reseller.subResellerLimit ?? 10);
+	const currentPaymentCard = $derived(data.reseller.paymentCard ?? { cardNumber: '', cardOwnerName: '' });
 	const isAtSubResellerLimit = $derived(data.subResellers.length >= subResellerLimit);
 	const selectedRequest = $derived(
 		selectedRequestId !== null
@@ -147,6 +154,11 @@
 			deltaTone: 'muted' as const
 		}
 	]);
+
+	$effect(() => {
+		if (!cardNumber && currentPaymentCard.cardNumber) cardNumber = currentPaymentCard.cardNumber;
+		if (!cardOwnerName && currentPaymentCard.cardOwnerName) cardOwnerName = currentPaymentCard.cardOwnerName;
+	});
 
 	// ── helpers ───────────────────────────────────────────────────────────────
 	function formatDate(ts: number) {
@@ -249,6 +261,19 @@
 			if (result?.subPackageError) toast.error(result.subPackageError);
 		} catch (e) {
 			toast.error(e instanceof Error ? e.message : 'ذخیره بسته انجام نشد.');
+		}
+	}
+
+	async function handleSavePaymentCard() {
+		try {
+			const result = (await updateResellerPaymentCardCommand({
+				cardNumber,
+				cardOwnerName
+			}).updates(resellerState)) as unknown as Record<string, string> | null;
+			if (result?.paymentCardSuccess) toast.success(result.paymentCardSuccess);
+			if (result?.paymentCardError) toast.error(result.paymentCardError);
+		} catch (e) {
+			toast.error(e instanceof Error ? e.message : 'ذخیره کارت انجام نشد.');
 		}
 	}
 
@@ -376,6 +401,41 @@
 
 <!-- ── Packages ───────────────────────────────────────────────────────── -->
 {#if activeSection === 'packages'}
+<section class="va-card payment-card-settings">
+	<div class="section-head">
+		<div>
+			<div class="section-title">کارت پرداخت زیرفروشندگان</div>
+			<div class="section-sub">این کارت در پنجره خرید بسته برای زیرفروشندگان نمایش داده می‌شود.</div>
+		</div>
+	</div>
+	<div class="payment-card-body">
+		<div class="payment-preview">
+			<div>
+				<span>شماره کارت</span>
+				<strong dir="ltr">{cardNumber || '---- ---- ---- ----'}</strong>
+			</div>
+			<div>
+				<span>به نام</span>
+				<strong>{cardOwnerName || 'ثبت نشده'}</strong>
+			</div>
+		</div>
+		<div class="payment-fields">
+			<label>
+				<span>شماره کارت</span>
+				<input type="text" dir="ltr" bind:value={cardNumber} placeholder="6037 9918 0000 0000" />
+			</label>
+			<label>
+				<span>نام صاحب کارت</span>
+				<input type="text" bind:value={cardOwnerName} placeholder="نام صاحب حساب" />
+			</label>
+			<button type="button" class="admin-btn admin-btn-primary" disabled={updateResellerPaymentCardCommand.pending > 0} onclick={handleSavePaymentCard}>
+				<AnimatedIcon name="check" size={13} />
+				<span>{updateResellerPaymentCardCommand.pending > 0 ? 'در حال ذخیره...' : 'ذخیره کارت'}</span>
+			</button>
+		</div>
+	</div>
+</section>
+
 <section class="va-card">
 	<div class="section-head">
 		<div>
@@ -1028,6 +1088,81 @@
 		color: var(--va-text-muted);
 		font-size: 12px;
 		padding: 8px 10px;
+	}
+
+	.payment-card-settings {
+		overflow: hidden;
+		padding: 0;
+	}
+
+	.payment-card-body {
+		display: grid;
+		gap: 14px;
+		padding: 16px;
+	}
+
+	.payment-preview {
+		display: grid;
+		grid-template-columns: minmax(0, 1.1fr) minmax(180px, 0.9fr);
+		gap: 1px;
+		overflow: hidden;
+		border: 1px solid color-mix(in srgb, var(--va-accent) 24%, var(--va-border));
+		border-radius: 14px;
+		background: var(--va-border);
+	}
+
+	.payment-preview div {
+		display: grid;
+		gap: 6px;
+		padding: 16px;
+		background:
+			linear-gradient(135deg, color-mix(in srgb, var(--va-accent) 13%, transparent), transparent 58%),
+			var(--va-bg-raised);
+	}
+
+	.payment-preview span,
+	.payment-fields label span {
+		color: var(--va-text-faint);
+		font-size: 11px;
+	}
+
+	.payment-preview strong {
+		color: var(--va-text);
+		font: 800 18px var(--va-font-mono);
+		letter-spacing: 0;
+	}
+
+	.payment-fields {
+		display: grid;
+		grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto;
+		align-items: end;
+		gap: 10px;
+	}
+
+	.payment-fields label {
+		display: grid;
+		gap: 7px;
+	}
+
+	.payment-fields input {
+		width: 100%;
+		border: 1px solid var(--va-border);
+		border-radius: 10px;
+		background: var(--va-bg-raised);
+		color: var(--va-text);
+		font: 600 12px var(--va-font-fa);
+		padding: 10px 12px;
+	}
+
+	.payment-fields input[dir='ltr'] {
+		font-family: var(--va-font-mono);
+	}
+
+	@media (max-width: 840px) {
+		.payment-preview,
+		.payment-fields {
+			grid-template-columns: 1fr;
+		}
 	}
 
 	/* Modals */

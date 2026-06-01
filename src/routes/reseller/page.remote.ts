@@ -31,6 +31,7 @@ import {
 	setSubResellerActive,
 	transferGbToSubReseller,
 	updateResellerCustomMessage,
+	updateResellerPaymentCard,
 	updateResellerPassword,
 	updateResellerProfile,
 	updateSubPackage,
@@ -768,6 +769,36 @@ export const updateProfileCommand = command(
 		} catch (error) {
 			return {
 				profileError: error instanceof Error ? error.message : 'ذخیره اطلاعات حساب انجام نشد.'
+			};
+		}
+	}
+);
+
+export const updateResellerPaymentCardCommand = command(
+	z.object({
+		cardNumber: z.string().trim().max(32, 'شماره کارت بیش از حد طولانی است.').optional().default(''),
+		cardOwnerName: z.string().trim().max(80, 'نام صاحب کارت بیش از حد طولانی است.').optional().default('')
+	}),
+	async ({ cardNumber, cardOwnerName }) => {
+		const reseller = await requireReseller();
+
+		if (!reseller) {
+			return {
+				paymentCardError: 'نشست شما منقضی شده است. دوباره وارد شوید.'
+			};
+		}
+
+		try {
+			checkActionRateLimit('payment-card', reseller.id);
+			await updateResellerPaymentCard(reseller.id, { cardNumber, cardOwnerName });
+			await getResellerState().set(await buildState());
+
+			return {
+				paymentCardSuccess: 'اطلاعات کارت پرداخت ذخیره شد.'
+			};
+		} catch (error) {
+			return {
+				paymentCardError: error instanceof Error ? error.message : 'ذخیره اطلاعات کارت انجام نشد.'
 			};
 		}
 	}

@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import AnimatedIcon from '$lib/components/admin/AnimatedIcon.svelte';
-	import { testRuntimeOptions, updateRuntimeOptions, updateSmtp } from '../../../../../routes/manage/page.remote';
+	import {
+		testRuntimeOptions,
+		updatePaymentCard,
+		updateRuntimeOptions,
+		updateSmtp
+	} from '../../../../../routes/manage/page.remote';
 
 	type RuntimeSettings = {
 		xuiPanelUrl: string;
@@ -47,11 +52,13 @@
 		fromAddress: string;
 		fromName: string;
 	};
+	type PaymentCard = { cardNumber: string; cardOwnerName: string };
 
 	type Props = {
 		data: {
 			runtimeSettings: RuntimeSettings;
 			runtimeHealth: RuntimeHealth;
+			paymentCard: PaymentCard;
 			smtpSettings: SmtpSettings;
 		};
 	};
@@ -80,9 +87,16 @@
 			fromName: data.smtpSettings.fromName ?? 'Skyline'
 		};
 	}
+	function currentPaymentCardValues() {
+		return {
+			cardNumber: data.paymentCard.cardNumber ?? '',
+			cardOwnerName: data.paymentCard.cardOwnerName ?? ''
+		};
+	}
 
 	let values = $state(currentRuntimeValues());
 	let smtpValues = $state(currentSmtpValues());
+	let cardValues = $state(currentPaymentCardValues());
 	let testForm = $state<HTMLFormElement | null>(null);
 
 	const health = $derived(data.runtimeHealth);
@@ -137,6 +151,10 @@
 
 	function syncSmtpFromServer() {
 		smtpValues = currentSmtpValues();
+	}
+
+	function syncPaymentCardFromServer() {
+		cardValues = currentPaymentCardValues();
 	}
 </script>
 
@@ -399,6 +417,59 @@
 	</form>
 
 	<form
+		{...updatePaymentCard.enhance(async ({ submit }) => {
+			await submit();
+			const result = updatePaymentCard.result;
+			if (result?.paymentCardSuccess) toast.success(result.paymentCardSuccess);
+			if (result?.paymentCardError) toast.error(result.paymentCardError);
+		})}
+		class="va-card payment-card-panel"
+	>
+		<div class="panel-head">
+			<div>
+				<div class="panel-title">کارت پرداخت فروشندگان</div>
+				<div class="panel-sub">در پنجره انتخاب بسته شارژ فروشنده نمایش داده می‌شود.</div>
+			</div>
+			<button type="button" class="va-chip" onclick={syncPaymentCardFromServer}>
+				<AnimatedIcon name="sparkle" size={11} />
+				بازگردانی
+			</button>
+		</div>
+		<div class="panel-body payment-card-body">
+			<div class="payment-preview">
+				<div>
+					<span>شماره کارت</span>
+					<strong dir="ltr">{cardValues.cardNumber || '---- ---- ---- ----'}</strong>
+				</div>
+				<div>
+					<span>به نام</span>
+					<strong>{cardValues.cardOwnerName || 'ثبت نشده'}</strong>
+				</div>
+			</div>
+			<div class="field-grid">
+				<div class="field-block">
+					<label class="va-section-label" for="payment-card-number">شماره کارت</label>
+					<div class="va-field-shell">
+						<input id="payment-card-number" name="cardNumber" type="text" dir="ltr" bind:value={cardValues.cardNumber} placeholder="6037 9918 0000 0000" autocomplete="off" />
+					</div>
+				</div>
+				<div class="field-block">
+					<label class="va-section-label" for="payment-card-owner">نام صاحب کارت</label>
+					<div class="va-field-shell">
+						<input id="payment-card-owner" name="cardOwnerName" type="text" bind:value={cardValues.cardOwnerName} placeholder="نام صاحب حساب" autocomplete="off" />
+					</div>
+				</div>
+			</div>
+			<div class="smtp-footer">
+				<span class="field-hint">اگر خالی باشد، فروشنده فقط بسته را می‌بیند و اطلاعات کارت نمایش داده نمی‌شود.</span>
+				<button type="submit" class="admin-btn admin-btn-primary" disabled={updatePaymentCard.pending > 0}>
+					{updatePaymentCard.pending > 0 ? 'در حال ذخیره...' : 'ذخیره کارت'}
+				</button>
+			</div>
+		</div>
+	</form>
+
+	<form
 		bind:this={testForm}
 		{...testRuntimeOptions.enhance(async ({ submit }) => {
 			await submit();
@@ -441,7 +512,8 @@
 
 	.settings-panel,
 	.health-panel,
-	.smtp-panel {
+	.smtp-panel,
+	.payment-card-panel {
 		overflow: hidden;
 		padding: 0;
 	}
@@ -606,6 +678,40 @@
 		border: 1px solid var(--va-border);
 	}
 
+	.payment-card-body {
+		gap: 14px;
+	}
+
+	.payment-preview {
+		display: grid;
+		grid-template-columns: minmax(0, 1.1fr) minmax(180px, 0.9fr);
+		gap: 1px;
+		overflow: hidden;
+		border: 1px solid color-mix(in srgb, var(--va-accent) 24%, var(--va-border));
+		border-radius: 14px;
+		background: var(--va-border);
+	}
+
+	.payment-preview div {
+		display: grid;
+		gap: 6px;
+		padding: 16px;
+		background:
+			linear-gradient(135deg, color-mix(in srgb, var(--va-accent) 13%, transparent), transparent 58%),
+			var(--va-bg-raised);
+	}
+
+	.payment-preview span {
+		color: var(--va-text-faint);
+		font-size: 11px;
+	}
+
+	.payment-preview strong {
+		color: var(--va-text);
+		font: 800 18px var(--va-font-mono);
+		letter-spacing: 0;
+	}
+
 	.smtp-footer {
 		display: flex;
 		align-items: center;
@@ -632,6 +738,10 @@
 		.smtp-footer {
 			align-items: stretch;
 			flex-direction: column;
+		}
+
+		.payment-preview {
+			grid-template-columns: 1fr;
 		}
 	}
 

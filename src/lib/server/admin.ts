@@ -79,6 +79,11 @@ export type RuntimeSettings = {
 	logFile: string;
 };
 
+export type PaymentCardSettings = {
+	cardNumber: string;
+	cardOwnerName: string;
+};
+
 const defaultFeatureSettings: FeatureSettings = {
 	configIssueReportCooldownMinutes: 1,
 	latencyTestTargetUrl: 'https://www.gstatic.com/generate_204',
@@ -837,6 +842,17 @@ function normalizeRuntimeSettings(settings: Partial<RuntimeSettings>): RuntimeSe
 	};
 }
 
+function normalizePaymentCardSettings(settings: Partial<PaymentCardSettings>): PaymentCardSettings {
+	return {
+		cardNumber: String(settings.cardNumber ?? '')
+			.trim()
+			.replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+			.replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+			.slice(0, 32),
+		cardOwnerName: String(settings.cardOwnerName ?? '').trim().replace(/\s+/g, ' ').slice(0, 80)
+	};
+}
+
 export async function getRuntimeSettings(): Promise<RuntimeSettings> {
 	await ensurePasskeyInitialized();
 
@@ -873,6 +889,25 @@ export async function updateRuntimeSettings(settings: RuntimeSettings) {
 		logLevel: normalized.logLevel,
 		logFile: normalized.logFile,
 		tokenConfigured: Boolean(normalized.xuiApiToken)
+	});
+}
+
+export async function getPaymentCardSettings(): Promise<PaymentCardSettings> {
+	await ensurePasskeyInitialized();
+	return normalizePaymentCardSettings({
+		cardNumber: (await getSetting('payment_card_number')) ?? '',
+		cardOwnerName: (await getSetting('payment_card_owner_name')) ?? ''
+	});
+}
+
+export async function updatePaymentCardSettings(settings: PaymentCardSettings): Promise<void> {
+	await ensurePasskeyInitialized();
+	const normalized = normalizePaymentCardSettings(settings);
+	await setSetting('payment_card_number', normalized.cardNumber);
+	await setSetting('payment_card_owner_name', normalized.cardOwnerName);
+	adminLogger.warn('Updated payment card settings.', {
+		hasCardNumber: normalized.cardNumber.length > 0,
+		hasOwnerName: normalized.cardOwnerName.length > 0
 	});
 }
 

@@ -2,7 +2,12 @@ import type { Cookies } from '@sveltejs/kit';
 import type { Row } from '@libsql/client';
 import { createHash, randomBytes } from 'node:crypto';
 import { logger } from '$lib/server/logger';
-import { getFeatureSettings, getResellerPanelMessage, isFeatureEnabled } from '$lib/server/admin';
+import {
+	getFeatureSettings,
+	getPaymentCardSettings,
+	getResellerPanelMessage,
+	isFeatureEnabled
+} from '$lib/server/admin';
 import {
 	executeMultiple,
 	getDatabase,
@@ -99,6 +104,8 @@ type ResellerAccountRow = Row & {
 	group_id: number | null;
 	client_tickets_enabled: number;
 	telegram_bot_allowed: number;
+	payment_card_number: string | null;
+	payment_card_owner_name: string | null;
 	is_system_manager: number;
 	created_at: number;
 	updated_at: number;
@@ -419,6 +426,17 @@ function normalizeOptionalEmail(email: string) {
 		throw new Error('ایمیل واردشده معتبر نیست.');
 	}
 	return normalized;
+}
+
+function normalizePaymentCardInput(input: { cardNumber?: string; cardOwnerName?: string }) {
+	return {
+		cardNumber: String(input.cardNumber ?? '')
+			.trim()
+			.replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+			.replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+			.slice(0, 32),
+		cardOwnerName: String(input.cardOwnerName ?? '').trim().replace(/\s+/g, ' ').slice(0, 80)
+	};
 }
 
 function parseAllowedInboundIds(value: string | null | undefined) {
@@ -1464,6 +1482,8 @@ async function runResellerMigrations() {
 	await ensureColumn('reseller_accounts', 'group_id', 'INTEGER');
 	await ensureColumn('reseller_accounts', 'client_tickets_enabled', 'INTEGER NOT NULL DEFAULT 0');
 	await ensureColumn('reseller_accounts', 'telegram_bot_allowed', 'INTEGER NOT NULL DEFAULT 0');
+	await ensureColumn('reseller_accounts', 'payment_card_number', "TEXT NOT NULL DEFAULT ''");
+	await ensureColumn('reseller_accounts', 'payment_card_owner_name', "TEXT NOT NULL DEFAULT ''");
 	await ensureColumn('reseller_accounts', 'is_system_manager', 'INTEGER NOT NULL DEFAULT 0');
 	await ensureColumn('reseller_sessions', 'created_at', 'INTEGER NOT NULL DEFAULT 0');
 	await ensureColumn('reseller_sessions', 'last_used_at', 'INTEGER NOT NULL DEFAULT 0');
@@ -1560,6 +1580,8 @@ async function getResellerAccountById(id: number) {
 			COALESCE(group_id, NULL) AS group_id,
 			COALESCE(client_tickets_enabled, 0) AS client_tickets_enabled,
 			COALESCE(telegram_bot_allowed, 0) AS telegram_bot_allowed,
+			COALESCE(payment_card_number, '') AS payment_card_number,
+			COALESCE(payment_card_owner_name, '') AS payment_card_owner_name,
 			COALESCE(is_system_manager, 0) AS is_system_manager,
 			created_at,
 			updated_at
@@ -1592,6 +1614,8 @@ async function getResellerAccountByUsername(username: string) {
 			COALESCE(group_id, NULL) AS group_id,
 			COALESCE(client_tickets_enabled, 0) AS client_tickets_enabled,
 			COALESCE(telegram_bot_allowed, 0) AS telegram_bot_allowed,
+			COALESCE(payment_card_number, '') AS payment_card_number,
+			COALESCE(payment_card_owner_name, '') AS payment_card_owner_name,
 			COALESCE(is_system_manager, 0) AS is_system_manager,
 			created_at,
 			updated_at
@@ -2750,6 +2774,20 @@ async function buildResellerDashboard(
 	const combinedVisiblePlans = [...visiblePublicPlans, ...accessiblePrivatePlans];
 	const sessions = await getResellerSessions(account.id, cookies ?? null);
 	const telegramBotFeatureEnabled = await isFeatureEnabled('telegram_sales_bot');
+	const parentAccount =
+		isSubReseller && account.parent_reseller_id
+			? await getResellerAccountById(account.parent_reseller_id)
+			: null;
+	const paymentCard = isSubReseller
+		? normalizePaymentCardInput({
+				cardNumber: parentAccount?.payment_card_number ?? '',
+				cardOwnerName: parentAccount?.payment_card_owner_name ?? ''
+			})
+		: await getPaymentCardSettings();
+	const ownPaymentCard = normalizePaymentCardInput({
+		cardNumber: account.payment_card_number ?? '',
+		cardOwnerName: account.payment_card_owner_name ?? ''
+	});
 
 	return {
 		authenticated: true,
@@ -2767,6 +2805,7 @@ async function buildResellerDashboard(
 			debtCapToman: account.debt_cap_toman ?? null,
 			clientTicketsEnabled: account.client_tickets_enabled === 1,
 			telegramBotAllowed: account.telegram_bot_allowed === 1,
+			paymentCard: ownPaymentCard,
 			subResellerLimit: account.sub_reseller_limit ?? 10,
 			group: resellerGroup
 		},
@@ -2778,6 +2817,7 @@ async function buildResellerDashboard(
 			gbLedger
 		),
 		dailySummary: buildDailySummary(requests, charges, gbLedger),
+		paymentCard,
 		salesEnabled,
 		availableInbounds,
 		templates,
@@ -3538,6 +3578,8 @@ export async function getAdminResellerOverview() {
 				COALESCE(group_id, NULL) AS group_id,
 				COALESCE(client_tickets_enabled, 0) AS client_tickets_enabled,
 				COALESCE(telegram_bot_allowed, 0) AS telegram_bot_allowed,
+				COALESCE(payment_card_number, '') AS payment_card_number,
+				COALESCE(payment_card_owner_name, '') AS payment_card_owner_name,
 				COALESCE(is_system_manager, 0) AS is_system_manager,
 				created_at,
 				updated_at
@@ -3919,6 +3961,7 @@ export async function getResellerDashboardState(
 				debtCapToman: null,
 				clientTicketsEnabled: false,
 				telegramBotAllowed: false,
+				paymentCard: { cardNumber: '', cardOwnerName: '' },
 				subResellerLimit: 10,
 				group: null
 			},
@@ -3949,6 +3992,7 @@ export async function getResellerDashboardState(
 				debtAddedTodayToman: 0,
 				gbSoldToday: 0
 			},
+			paymentCard: { cardNumber: '', cardOwnerName: '' },
 			salesEnabled: false,
 			availableInbounds: [],
 			templates: [],
@@ -4020,6 +4064,22 @@ export async function updateResellerProfile(resellerId: number, email: string) {
 		nowSeconds(),
 		resellerId
 	]);
+}
+
+export async function updateResellerPaymentCard(
+	resellerId: number,
+	input: { cardNumber: string; cardOwnerName: string }
+) {
+	await ensureResellerTables();
+	const account = await getResellerAccountById(resellerId);
+	if (!account || account.parent_reseller_id !== null || account.can_manage_sub_resellers !== 1) {
+		throw new Error('فقط فروشنده والد می‌تواند کارت پرداخت زیرفروشندگان را تنظیم کند.');
+	}
+	const normalized = normalizePaymentCardInput(input);
+	await run(
+		'UPDATE reseller_accounts SET payment_card_number = ?, payment_card_owner_name = ?, updated_at = ? WHERE id = ?',
+		[normalized.cardNumber, normalized.cardOwnerName, nowSeconds(), resellerId]
+	);
 }
 
 export async function updateResellerUsername(id: number, username: string) {
@@ -4444,6 +4504,8 @@ async function getOrCreateManagerSystemAccount() {
 		 COALESCE(group_id, NULL) AS group_id,
 		 COALESCE(client_tickets_enabled, 0) AS client_tickets_enabled,
 		 COALESCE(telegram_bot_allowed, 0) AS telegram_bot_allowed,
+		 COALESCE(payment_card_number, '') AS payment_card_number,
+		 COALESCE(payment_card_owner_name, '') AS payment_card_owner_name,
 		 COALESCE(is_system_manager, 0) AS is_system_manager, created_at, updated_at
 		 FROM reseller_accounts WHERE COALESCE(is_system_manager, 0) = 1 LIMIT 1`
 	);
@@ -5214,7 +5276,15 @@ export async function getSubResellersByParent(
 	const accounts = await queryAll<ResellerAccountRow>(
 		`SELECT id, username, username_normalized, password_hash, is_active, email,
 		        must_change_password, allowed_inbound_ids, custom_message, debt_cap_toman,
-		        parent_reseller_id, can_manage_sub_resellers, created_at, updated_at
+		        parent_reseller_id, can_manage_sub_resellers,
+		        COALESCE(sub_reseller_limit, 10) AS sub_reseller_limit,
+		        COALESCE(group_id, NULL) AS group_id,
+		        COALESCE(client_tickets_enabled, 0) AS client_tickets_enabled,
+		        COALESCE(telegram_bot_allowed, 0) AS telegram_bot_allowed,
+		        COALESCE(payment_card_number, '') AS payment_card_number,
+		        COALESCE(payment_card_owner_name, '') AS payment_card_owner_name,
+		        COALESCE(is_system_manager, 0) AS is_system_manager,
+		        created_at, updated_at
 		 FROM reseller_accounts
 		 WHERE parent_reseller_id = ?
 		 ORDER BY username COLLATE NOCASE ASC`,

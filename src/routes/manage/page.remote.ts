@@ -12,6 +12,7 @@ import {
 	getFeatureFlags,
 	getFeatureSettings,
 	getRuntimeSettings,
+	getPaymentCardSettings,
 	getSmtpSettings,
 	getAdminUsername,
 	getAdminSessions,
@@ -27,6 +28,7 @@ import {
 	updateClientAppLinks,
 	updateFeatureSettings,
 	updateRuntimeSettings,
+	updatePaymentCardSettings,
 	updateSmtpSettings,
 	updatePanelPathSettings,
 	updateResellerPanelMessage,
@@ -162,6 +164,10 @@ const runtimeSettingsSchema = z.object({
 	logLevel: z.enum(['debug', 'info', 'warning', 'error']).default('warning'),
 	logFile: z.string().trim().max(500, 'مسیر فایل لاگ بیش از حد طولانی است.').optional().default('')
 });
+const paymentCardSchema = z.object({
+	cardNumber: z.string().trim().max(32, 'شماره کارت بیش از حد طولانی است.').optional().default(''),
+	cardOwnerName: z.string().trim().max(80, 'نام صاحب کارت بیش از حد طولانی است.').optional().default('')
+});
 
 function normalizeCurrencyDigits(value: string) {
 	return value
@@ -290,6 +296,10 @@ async function buildManageState(authenticated: boolean) {
 				logLevel: 'warning' as const,
 				logFile: ''
 			},
+			paymentCard: {
+				cardNumber: '',
+				cardOwnerName: ''
+			},
 			runtimeHealth: null,
 			panelPathSettings: {
 				managerBasePath: '',
@@ -331,6 +341,7 @@ async function buildManageState(authenticated: boolean) {
 		vlessRewriteRules,
 		adminUsername,
 		runtimeSettings,
+		paymentCard,
 		panelPathSettings,
 		resellerGroups,
 		planAccessEntries,
@@ -366,6 +377,7 @@ async function buildManageState(authenticated: boolean) {
 		getVlessRewriteRules(),
 		getAdminUsername(),
 		getRuntimeSettings(),
+		getPaymentCardSettings(),
 		getPanelPathSettings(),
 		getResellerGroups(),
 		getAllResellerPlanAccess(),
@@ -396,6 +408,7 @@ async function buildManageState(authenticated: boolean) {
 		vlessRewriteRules,
 		adminUsername,
 		runtimeSettings,
+		paymentCard,
 		runtimeHealth: null,
 		panelPathSettings,
 		resellerGroups,
@@ -769,6 +782,23 @@ export const updateRuntimeOptions = form(runtimeSettingsSchema, async (settings)
 
 	return {
 		runtimeSettingsSuccess: 'تنظیمات اتصال ذخیره شد.'
+	};
+});
+
+export const updatePaymentCard = form(paymentCardSchema, async (settings) => {
+	const cookies = await requireAdminSession();
+
+	if (!cookies) {
+		return {
+			paymentCardError: 'نشست شما منقضی شده است. دوباره وارد شوید.'
+		};
+	}
+
+	await updatePaymentCardSettings(settings);
+	await getManageState().set(await buildManageState(true));
+
+	return {
+		paymentCardSuccess: 'اطلاعات کارت پرداخت ذخیره شد.'
 	};
 });
 

@@ -48,6 +48,7 @@
 	type Props = {
 		data: {
 			isSubReseller?: boolean;
+			paymentCard?: { cardNumber: string; cardOwnerName: string };
 			stats: {
 				gbBalance: number;
 				totalGbAdded: number;
@@ -99,6 +100,8 @@
 	const visibleLedger = $derived(data.gbLedger.slice((ledgerPage - 1) * pageSize, ledgerPage * pageSize));
 	const ledgerPages = $derived(Math.max(1, Math.ceil(data.gbLedger.length / pageSize)));
 	const pendingCount = $derived(activeRequests.filter((r) => r.status === 'pending').length);
+	const paymentCard = $derived(data.paymentCard ?? { cardNumber: '', cardOwnerName: '' });
+	const hasPaymentCard = $derived(Boolean(paymentCard.cardNumber || paymentCard.cardOwnerName));
 
 	const statItems = $derived([
 		{
@@ -156,6 +159,16 @@
 		if (type === 'recharge') return 'شارژ مجدد';
 		if (type === 'transfer') return 'انتقال گیگ';
 		return 'برگشت اعتبار';
+	}
+
+	async function copyCardNumber() {
+		if (!paymentCard.cardNumber) return;
+		try {
+			await navigator.clipboard.writeText(paymentCard.cardNumber.replace(/\s+/g, ''));
+			toast.success('شماره کارت کپی شد.');
+		} catch {
+			toast.error('کپی شماره کارت انجام نشد.');
+		}
 	}
 
 	async function handleReceiptFile(event: Event) {
@@ -480,6 +493,26 @@
 				{/each}
 			</div>
 
+			<div class="payment-target-card" class:is-empty={!hasPaymentCard}>
+				<div class="payment-target-icon">
+					<AnimatedIcon name="ticket" size={18} />
+				</div>
+				<div class="payment-target-main">
+					<span>{isSubReseller ? 'کارت فروشنده والد' : 'کارت مدیر'}</span>
+					<strong dir="ltr">{paymentCard.cardNumber || 'شماره کارت ثبت نشده'}</strong>
+					<small>{paymentCard.cardOwnerName || 'نام صاحب کارت ثبت نشده'}</small>
+				</div>
+				<button
+					type="button"
+					class="admin-btn admin-btn-ghost"
+					disabled={!paymentCard.cardNumber}
+					onclick={copyCardNumber}
+				>
+					<span class="mdi mdi-content-copy"></span>
+					<span>کپی کارت</span>
+				</button>
+			</div>
+
 			<div class="va-section-label">رسید پرداخت</div>
 			<textarea
 				bind:value={receiptText}
@@ -700,6 +733,53 @@
 		font-weight: 700;
 	}
 
+	.payment-target-card {
+		display: grid;
+		grid-template-columns: 44px minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 12px;
+		border: 1px solid color-mix(in srgb, var(--va-accent) 26%, var(--va-border));
+		border-radius: 16px;
+		background:
+			linear-gradient(135deg, color-mix(in srgb, var(--va-accent) 13%, transparent), transparent 62%),
+			var(--va-bg-raised);
+		padding: 12px;
+	}
+
+	.payment-target-card.is-empty {
+		border-color: var(--va-border);
+		background: var(--va-bg-raised);
+	}
+
+	.payment-target-icon {
+		width: 44px;
+		height: 44px;
+		display: grid;
+		place-items: center;
+		border-radius: 13px;
+		background: var(--va-accent-soft);
+		color: var(--va-accent);
+	}
+
+	.payment-target-main {
+		display: grid;
+		gap: 3px;
+		min-width: 0;
+	}
+
+	.payment-target-main span,
+	.payment-target-main small {
+		color: var(--va-text-faint);
+		font-size: 11px;
+	}
+
+	.payment-target-main strong {
+		color: var(--va-text);
+		font: 800 16px var(--va-font-mono);
+		letter-spacing: 0;
+		overflow-wrap: anywhere;
+	}
+
 	textarea {
 		width: 100%;
 		min-height: 80px;
@@ -790,6 +870,17 @@
 		border: 0;
 		background: transparent;
 		cursor: zoom-in;
+	}
+
+	@media (max-width: 640px) {
+		.payment-target-card {
+			grid-template-columns: 44px minmax(0, 1fr);
+		}
+
+		.payment-target-card :global(.admin-btn) {
+			grid-column: 1 / -1;
+			justify-content: center;
+		}
 	}
 </style>
 
