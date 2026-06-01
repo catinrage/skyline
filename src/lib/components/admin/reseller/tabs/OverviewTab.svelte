@@ -797,6 +797,17 @@
 	}
 
 	@media (max-width: 720px) {
+		.status-panel-body {
+			flex-direction: column;
+			align-items: center;
+			gap: 16px;
+			padding: 16px;
+		}
+
+		.legend-list {
+			width: 100%;
+		}
+
 		.attention-table {
 			min-width: 0;
 		}
