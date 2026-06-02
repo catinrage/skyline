@@ -58,6 +58,18 @@
 			]
 		},
 		{
+			id: 'income-model',
+			title: 'مدل درآمدی: فروشنده و زیرفروشنده',
+			steps: [
+				'شما گیگ را از مدیر سیستم با یک قیمت مشخص خریداری می‌کنید.',
+				'می‌توانید همین گیگ را با قیمت بالاتری به زیرفروشندگان بفروشید — این اختلاف قیمت سود مستقیم شماست.',
+				'زیرفروشنده با پنل مستقل خودش کانفیگ می‌سازد و مشتری‌های خودش را مدیریت می‌کند.',
+				'هر بار زیرفروشنده درخواست شارژ گیگ دهد، شما آن را تأیید می‌کنید و گیگ از موجودی شما کسر می‌شود — به قیمتی که خودتان تعیین کرده‌اید.',
+				'در نتیجه علاوه بر فروش مستقیم به مشتریان خودتان، از فروش گیگ به هر زیرفروشنده هم درآمد دارید.',
+				'هرچه تعداد زیرفروشندگان فعال‌تان بیشتر باشد، درآمد غیرمستقیم شما هم بیشتر می‌شود — بدون اینکه نیازی به مدیریت مستقیم مشتریان آن‌ها داشته باشید.'
+			]
+		},
+		{
 			id: 'sub-resellers',
 			title: 'مدیریت زیرفروشندگان',
 			steps: [
@@ -158,6 +170,16 @@
 			q: 'آیا با غیرفعال یا حذف کردن کانفیگ، گیگ مصرف‌نشده برمی‌گردد؟',
 			a: 'خیر. حجم گیگ در لحظه ساخت کانفیگ از موجودی شما کسر می‌شود و با غیرفعال‌سازی یا حذف کانفیگ به حساب شما بازنمی‌گردد. بنابراین پیش از ساخت کانفیگ مطمئن شوید که حجم و مشخصات صحیح است.',
 			open: false
+		},
+		{
+			q: 'رابطه مالی فروشنده و زیرفروشنده چطور کار می‌کند؟',
+			a: 'شما گیگ را از مدیر سیستم با قیمت مشخصی می‌خرید. وقتی به زیرفروشنده گیگ می‌فروشید، قیمت را خودتان تعیین می‌کنید. اختلاف قیمت خرید شما از مدیر و فروش شما به زیرفروشنده، سود مستقیم شماست. زیرفروشنده هم همین کار را با مشتریان خودش می‌کند.',
+			open: false
+		},
+		{
+			q: 'آیا داشتن زیرفروشنده واقعاً درآمدزاست؟',
+			a: 'بله. هر زیرفروشنده فعال به‌صورت مستقل مشتری جذب می‌کند و گیگ می‌فروشد — اما گیگ مورد نیازش را از شما می‌خرد. شما بدون اینکه درگیر مشتریان آن‌ها باشید، از هر بار شارژ زیرفروشنده سود می‌برید. هرچه شبکه زیرفروشندگانتان بزرگ‌تر باشد، این درآمد غیرمستقیم بیشتر می‌شود.',
+			open: false
 		}
 	]);
 
@@ -227,8 +249,20 @@
 	{:else if activeTab === 'procedures'}
 		<div class="tab-content">
 			{#each procedures as proc}
-				<div class="proc-block va-card">
-					<div class="proc-title">{proc.title}</div>
+				<div class="proc-block va-card" class:proc-income={proc.id === 'income-model'}>
+					{#if proc.id === 'income-model'}
+						<div class="proc-income-header">
+							<div class="proc-income-icon">
+								<AnimatedIcon name="spark-up" size={16} active />
+							</div>
+							<div>
+								<div class="proc-title" style="margin-bottom:2px">{proc.title}</div>
+								<div class="proc-income-sub">داشتن زیرفروشنده = درآمد بدون مدیریت مستقیم مشتری</div>
+							</div>
+						</div>
+					{:else}
+						<div class="proc-title">{proc.title}</div>
+					{/if}
 					<ol class="proc-steps">
 						{#each proc.steps as step, i}
 							<li class="proc-step">
@@ -386,6 +420,38 @@
 	/* ── Procedures ── */
 	.proc-block {
 		padding: 18px 20px;
+	}
+
+	.proc-income {
+		border-color: color-mix(in srgb, var(--va-accent) 35%, transparent);
+		background: color-mix(in srgb, var(--va-accent) 5%, var(--va-bg-panel));
+	}
+
+	.proc-income-header {
+		display: flex;
+		align-items: flex-start;
+		gap: 12px;
+		margin-bottom: 14px;
+		padding-bottom: 12px;
+		border-bottom: 1px solid color-mix(in srgb, var(--va-accent) 20%, transparent);
+	}
+
+	.proc-income-icon {
+		width: 34px;
+		height: 34px;
+		display: grid;
+		place-items: center;
+		border-radius: 8px;
+		background: color-mix(in srgb, var(--va-accent) 15%, transparent);
+		color: var(--va-accent);
+		flex-shrink: 0;
+	}
+
+	.proc-income-sub {
+		font-size: 11.5px;
+		color: var(--va-accent);
+		font-weight: 550;
+		margin-top: 3px;
 	}
 
 	.proc-title {
