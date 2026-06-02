@@ -43,22 +43,23 @@
 	}
 	.preview-frame {
 		position: relative;
-		display: grid;
-		place-items: center;
 		width: min(1080px, 100%);
-		height: min(88vh, 900px);
+		max-height: calc(100vh - 40px);
+		overflow-y: auto;
+		overflow-x: hidden;
+		border-radius: 10px;
 	}
 	img {
-		max-width: 100%;
-		max-height: 100%;
+		display: block;
+		width: 100%;
+		height: auto;
 		border-radius: 8px;
-		object-fit: contain;
 		background: var(--va-bg-panel);
 	}
 	.preview-close {
-		position: absolute;
+		position: sticky;
 		top: 0;
-		inset-inline-end: 0;
+		float: inline-end;
 		z-index: 1;
 		width: 38px;
 		height: 38px;
