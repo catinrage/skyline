@@ -45,21 +45,24 @@
 		position: relative;
 		width: min(1080px, 100%);
 		max-height: calc(100vh - 40px);
-		overflow-y: auto;
-		overflow-x: hidden;
-		border-radius: 10px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 	img {
 		display: block;
-		width: 100%;
+		max-width: 100%;
+		max-height: calc(100vh - 40px);
+		width: auto;
 		height: auto;
 		border-radius: 8px;
+		object-fit: contain;
 		background: var(--va-bg-panel);
 	}
 	.preview-close {
-		position: sticky;
-		top: 0;
-		float: inline-end;
+		position: absolute;
+		top: -12px;
+		inset-inline-end: -12px;
 		z-index: 1;
 		width: 38px;
 		height: 38px;
