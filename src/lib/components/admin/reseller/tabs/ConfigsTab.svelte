@@ -1118,92 +1118,169 @@
 					</button>
 				{/if}
 			</div>
-			<div>
-				<div class="va-section-label">شناسه‌ها</div>
-				<div class="identifier-list">
-					<div class="identifier-row">
-						<span>UUID</span>
-						<strong dir="ltr">{selectedRequest.xuiClientUuid}</strong>
-						<button type="button" class="va-icon-btn" onclick={() => copyUserPage(selectedRequest.xuiClientUuid)} aria-label="کپی UUID">
-							<span class="mdi mdi-content-copy"></span>
-						</button>
-					</div>
-					<div class="identifier-row">
-						<span>Email</span>
-						<strong dir="ltr">{selectedRequest.xuiEmail}</strong>
-					</div>
-					<div class="identifier-row">
-						<span>Plan</span>
-						<strong>{selectedRequest.quotaGbSnapshot}G · {selectedRequest.durationDaysSnapshot} روز</strong>
-					</div>
-				</div>
+
+			<div class="va-inspector-tabs">
+				<button type="button" class="va-inspector-tab" class:is-active={inspectorTab === 'info'} onclick={() => (inspectorTab = 'info')}>اطلاعات</button>
+				<button type="button" class="va-inspector-tab" class:is-active={inspectorTab === 'usage'} onclick={() => (inspectorTab = 'usage')}>مصرف</button>
+				<button type="button" class="va-inspector-tab" class:is-active={inspectorTab === 'history'} onclick={() => (inspectorTab = 'history')}>تاریخچه</button>
 			</div>
-			<div>
-				<div class="va-section-label">مصرف</div>
-				<div class="usage-inspector-head">
-					<div class="usage-big va-mono">{selectedRequest.usage ? formatTraffic(selectedRequest.usage.usedBytes) : '—'}</div>
-					<div class="cell-meta">از {selectedRequest.quotaGbSnapshot} GB</div>
-				</div>
-				<VaProgressBar
-					value={selectedRequest.usage?.usedBytes ?? 0}
-					max={selectedRequest.usage?.totalBytes ?? selectedRequest.quotaGbSnapshot * 1024 ** 3}
-					tone={usageTone(selectedRequest)}
-				/>
-				<div class="field-hint">{expiryText(selectedRequest)}</div>
-			</div>
-			{#if selectedRequest.internalNote}
+
+			{#if inspectorTab === 'usage'}
 				<div>
-					<div class="va-section-label">یادداشت داخلی</div>
-					<div class="internal-note-box">{selectedRequest.internalNote}</div>
+					<div class="va-section-label">مصرف</div>
+					<div class="usage-inspector-head">
+						<div class="usage-big va-mono">{selectedRequest.usage ? formatTraffic(selectedRequest.usage.usedBytes) : '—'}</div>
+						<div class="cell-meta">از {selectedRequest.quotaGbSnapshot} GB</div>
+					</div>
+					<VaProgressBar
+						value={selectedRequest.usage?.usedBytes ?? 0}
+						max={selectedRequest.usage?.totalBytes ?? selectedRequest.quotaGbSnapshot * 1024 ** 3}
+						tone={usageTone(selectedRequest)}
+					/>
+					<div class="field-hint">
+						{usagePercent(selectedRequest).toLocaleString('fa-IR-u-nu-latn')}٪ مصرف شده ·
+						{selectedRequest.usage ? formatTraffic(selectedRequest.usage.remainingBytes ?? 0) : '—'} باقی‌مانده
+					</div>
 				</div>
-			{/if}
-			<div>
-				<div class="va-section-label">افزایش حجم</div>
-				<div class="add-quota-row">
-					<div class="va-field-shell add-quota-field">
-						<input
-							type="number"
-							class="add-quota-input"
-							min="0.01"
-							step="0.5"
-							bind:value={addQuotaGb}
-							dir="ltr"
-						/>
-						<span class="va-field-suffix">GB</span>
+			{:else if inspectorTab === 'history'}
+				<div>
+					<div class="va-section-label">تاریخچه مصرف اعتبار این کانفیگ</div>
+					<div class="charge-history-list">
+						{#if selectedCharges.length === 0}
+							<div class="field-hint">رویدادی برای این کانفیگ ثبت نشده است.</div>
+						{:else}
+							{#each selectedCharges as charge (charge.id)}
+								<div class="charge-history-row">
+									<span class="mdi {charge.type === 'recharge' ? 'mdi-refresh' : 'mdi-plus-circle-outline'}"></span>
+									<div>
+										<strong>{chargeTypeLabel(charge.type)}</strong>
+										<small>{formatDate(charge.createdAt)}</small>
+									</div>
+									<div class="va-mono">{formatToman(charge.amountToman - charge.reversedAmountToman)}</div>
+								</div>
+							{/each}
+						{/if}
+					</div>
+				</div>
+			{:else}
+				<div>
+					<div class="va-section-label">شناسه‌ها</div>
+					<div class="identifier-list">
+						<div class="identifier-row">
+							<span>UUID</span>
+							<strong dir="ltr">{selectedRequest.xuiClientUuid}</strong>
+							<button type="button" class="va-icon-btn" onclick={() => copyUserPage(selectedRequest.xuiClientUuid)} aria-label="کپی UUID">
+								<span class="mdi mdi-content-copy"></span>
+							</button>
+						</div>
+						<div class="identifier-row">
+							<span>Email</span>
+							<strong dir="ltr">{selectedRequest.xuiEmail}</strong>
+						</div>
+						<div class="identifier-row">
+							<span>Plan</span>
+							<strong>{selectedRequest.quotaGbSnapshot}G · {selectedRequest.durationDaysSnapshot} روز</strong>
+						</div>
+						<div class="identifier-row">
+							<span>قیمت فروش</span>
+							<strong>{formatToman(selectedRequest.priceTomanSnapshot)} تومان</strong>
+						</div>
+					</div>
+				</div>
+
+				{#if selectedRequest.internalNote}
+					<div>
+						<div class="va-section-label">یادداشت داخلی</div>
+						<div class="internal-note-box">{selectedRequest.internalNote}</div>
+					</div>
+				{/if}
+
+				<div>
+					<div class="va-section-label">شارژ مجدد</div>
+					<div class="plan-current">
+						<span>پلن فعلی</span>
+						<strong>
+							{#if selectedRequest.rechargePlan}
+								{selectedRequest.rechargePlan.quotaGb}G · {selectedRequest.rechargePlan.durationDays} روز
+							{:else}
+								{selectedRequest.rechargeBlockedReason ?? 'قابل شارژ نیست'}
+							{/if}
+						</strong>
 					</div>
 					<button
 						type="button"
-						class="admin-btn admin-btn-primary"
-						disabled={!data.salesEnabled || selectedRequest.revokedAt !== null || selectedRequest.status === 'missing' || addQuotaGb <= 0}
-						onclick={() => (addQuotaOpen = selectedRequest.id)}
+						class="admin-btn admin-btn-primary full-width"
+						disabled={!data.salesEnabled || !selectedRequest.canRecharge}
+						onclick={() => (rechargeOpen = selectedRequest.id)}
 					>
-						<span class="mdi mdi-plus"></span>
-						<span>اضافه کن</span>
+						<AnimatedIcon name="cloud" size={13} />
+						<span>شارژ مجدد{selectedRequest.rechargePlan ? ` · ${selectedRequest.rechargePlan.quotaGb} GB` : ''}</span>
 					</button>
+					<div class="field-hint">مصرف صفر می‌شود و اعتبار از امروز تمدید می‌شود.</div>
 				</div>
-				<div class="field-hint">بدون صفر شدن مصرف، حجم به کانفیگ اضافه می‌شود.</div>
-			</div>
-			<div class="va-actions-list">
-				{#if selectedRequest.configUrl}
-					<button type="button" class="va-action-row" onclick={() => selectedRequest?.configUrl && copyConfig(selectedRequest.configUrl)}>
-						<span class="mdi mdi-content-copy"></span>
-						<span>کپی VLESS</span>
-					</button>
-				{/if}
-				<button type="button" class="va-action-row" onclick={() => copyUserPage(selectedRequest.xuiClientUuid)}>
-					<span class="mdi mdi-cloud-outline"></span>
-					<span>کپی صفحه کاربر</span>
-				</button>
-				<a
-					href={resolve(`/user/${selectedRequest.xuiClientUuid}?ri=${encodeURIComponent(ownerKey)}`)}
-					target="_blank"
-					rel="noreferrer"
-					class="va-action-row"
-				>
-					<span class="mdi mdi-open-in-new"></span>
-					<span>باز کردن صفحه کاربر</span>
-				</a>
-			</div>
+
+				<div>
+					<div class="va-section-label">افزایش حجم</div>
+					<div class="add-quota-row">
+						<div class="va-field-shell add-quota-field">
+							<input
+								type="number"
+								class="add-quota-input"
+								min="0.01"
+								step="0.5"
+								bind:value={addQuotaGb}
+								dir="ltr"
+							/>
+							<span class="va-field-suffix">GB</span>
+						</div>
+						<button
+							type="button"
+							class="admin-btn admin-btn-primary"
+							disabled={!data.salesEnabled || selectedRequest.revokedAt !== null || selectedRequest.status === 'missing' || addQuotaGb <= 0}
+							onclick={() => (addQuotaOpen = selectedRequest.id)}
+						>
+							<span class="mdi mdi-plus"></span>
+							<span>اضافه کن</span>
+						</button>
+					</div>
+					<div class="field-hint">بدون صفر شدن مصرف، حجم به کانفیگ اضافه می‌شود.</div>
+				</div>
+
+				<div>
+					<div class="va-section-label">اقدامات سریع</div>
+					<div class="va-actions-list">
+						{#if selectedRequest.configUrl}
+							<button type="button" class="va-action-row" onclick={() => selectedRequest?.configUrl && copyConfig(selectedRequest.configUrl)}>
+								<span class="mdi mdi-content-copy"></span>
+								<span>کپی VLESS</span>
+							</button>
+						{/if}
+						<button type="button" class="va-action-row" onclick={() => copyUserPage(selectedRequest.xuiClientUuid)}>
+							<span class="mdi mdi-cloud-outline"></span>
+							<span>کپی صفحه کاربر</span>
+						</button>
+						<a
+							href={resolve(`/user/${selectedRequest.xuiClientUuid}?ri=${encodeURIComponent(ownerKey)}`)}
+							target="_blank"
+							rel="noreferrer"
+							class="va-action-row"
+						>
+							<span class="mdi mdi-open-in-new"></span>
+							<span>باز کردن صفحه کاربر</span>
+						</a>
+						{#if selectedRequest.revokedAt === null}
+							<button
+								type="button"
+								class="va-action-row danger"
+								onclick={() => (revokeOpen = selectedRequest.id)}
+							>
+								<span class="mdi mdi-trash-can-outline"></span>
+								<span>لغو کانفیگ از x-ui</span>
+							</button>
+						{/if}
+					</div>
+				</div>
+			{/if}
 		</div>
 	{/if}
 </Modal>
