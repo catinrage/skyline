@@ -17,6 +17,7 @@
 	import VaStatusDot from '$lib/components/admin/va/VaStatusDot.svelte';
 	import {
 		addQuotaCommand as defaultAddQuotaCommand,
+		deleteConfigCommand as defaultDeleteConfigCommand,
 		rechargeConfigCommand as defaultRechargeConfigCommand,
 		revokeConfigCommand as defaultRevokeConfigCommand,
 		toggleConfigEnabledCommand as defaultToggleConfigEnabledCommand
@@ -89,6 +90,7 @@
 			recharge: any;
 			addQuota: any;
 			revoke: any;
+			deleteConfig: any;
 		};
 		ownerKey?: string;
 	};
@@ -101,7 +103,8 @@
 			toggle: defaultToggleConfigEnabledCommand,
 			recharge: defaultRechargeConfigCommand,
 			addQuota: defaultAddQuotaCommand,
-			revoke: defaultRevokeConfigCommand
+			revoke: defaultRevokeConfigCommand,
+			deleteConfig: defaultDeleteConfigCommand
 		},
 		ownerKey = data.reseller.username
 	}: Props = $props();
@@ -120,6 +123,7 @@
 	let rechargeOpen = $state<number | null>(null);
 	let revokeOpen = $state<number | null>(null);
 	let addQuotaOpen = $state<number | null>(null);
+	let deleteOpen = $state<number | null>(null);
 	let addQuotaGb = $state(1);
 	let openMenuId = $state<number | null>(null);
 	let contextMenuStyle = $state('');
@@ -400,6 +404,24 @@
 		}
 	}
 
+	async function handleDeleteConfig() {
+		if (deleteOpen === null) return;
+		try {
+			const result = (await commands.deleteConfig({ id: deleteOpen }).updates(stateTarget)) as
+				| Record<string, unknown>
+				| null;
+			if (result?.deleteConfigSuccess) {
+				toast.success(result.deleteConfigSuccess as string);
+				deleteOpen = null;
+				selectedId = null;
+				mobileDetailsOpen = false;
+			}
+			if (result?.deleteConfigError) toast.error(result.deleteConfigError as string);
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : 'حذف کانفیگ انجام نشد.');
+		}
+	}
+
 	async function handleRevoke() {
 		if (revokeOpen === null) return;
 		try {
@@ -471,6 +493,9 @@
 	);
 	const addQuotaRequest = $derived(
 		addQuotaOpen !== null ? data.requests.find((r) => r.id === addQuotaOpen) ?? null : null
+	);
+	const deleteRequest = $derived(
+		deleteOpen !== null ? data.requests.find((r) => r.id === deleteOpen) ?? null : null
 	);
 </script>
 
@@ -1022,6 +1047,15 @@
 								<span class="mdi mdi-trash-can-outline"></span>
 								<span>لغو کانفیگ از x-ui</span>
 							</button>
+						{:else}
+							<button
+								type="button"
+								class="va-action-row danger"
+								onclick={() => (deleteOpen = selectedRequest.id)}
+							>
+								<span class="mdi mdi-delete-forever-outline"></span>
+								<span>حذف از لیست</span>
+							</button>
 						{/if}
 					</div>
 				</div>
@@ -1093,6 +1127,18 @@
 			>
 				<span class="mdi mdi-trash-can-outline"></span>
 				<span>لغو کانفیگ</span>
+			</button>
+		{:else}
+			<button
+				type="button"
+				class="danger"
+				onclick={() => {
+					deleteOpen = menuRequest.id;
+					closeContextMenu();
+				}}
+			>
+				<span class="mdi mdi-delete-forever-outline"></span>
+				<span>حذف از لیست</span>
 			</button>
 		{/if}
 	</div>
@@ -1277,6 +1323,15 @@
 								<span class="mdi mdi-trash-can-outline"></span>
 								<span>لغو کانفیگ از x-ui</span>
 							</button>
+						{:else}
+							<button
+								type="button"
+								class="va-action-row danger"
+								onclick={() => (deleteOpen = selectedRequest.id)}
+							>
+								<span class="mdi mdi-delete-forever-outline"></span>
+								<span>حذف از لیست</span>
+							</button>
 						{/if}
 					</div>
 				</div>
@@ -1346,6 +1401,35 @@
 		>
 			<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
 			<span>{commands.revoke.pending > 0 ? 'در حال حذف...' : 'بله، حذف کن'}</span>
+		</button>
+	{/snippet}
+</Modal>
+
+<!-- Delete config confirmation -->
+<Modal open={deleteOpen !== null} title="حذف کانفیگ از لیست" eyebrow="تایید حذف دائمی" onClose={() => (deleteOpen = null)}>
+	{#if deleteRequest}
+		<p>
+			کانفیگ <strong>{deleteRequest.customerLabel || deleteRequest.xuiEmail}</strong> از لیست شما حذف می‌شود. این کانفیگ قبلاً از x-ui لغو شده و اعتبارش برگشت خورده است.
+		</p>
+		<div class="modal-summary">
+			<div>{deleteRequest.quotaGbSnapshot} گیگ · {deleteRequest.durationDaysSnapshot} روز</div>
+			<div>وضعیت: <strong>لغوشده</strong></div>
+		</div>
+		<p class="modal-warning">
+			این عملیات برگشت‌ناپذیر است. رکورد کانفیگ و تاریخچه مالی آن از پایگاه داده حذف می‌شود.
+		</p>
+	{/if}
+
+	{#snippet footer()}
+		<button type="button" class="admin-btn admin-btn-ghost" onclick={() => (deleteOpen = null)}>انصراف</button>
+		<button
+			type="button"
+			class="admin-btn admin-btn-danger"
+			disabled={commands.deleteConfig.pending > 0}
+			onclick={handleDeleteConfig}
+		>
+			<span class="mdi mdi-delete-forever-outline"></span>
+			<span>{commands.deleteConfig.pending > 0 ? 'در حال حذف...' : 'بله، حذف کن'}</span>
 		</button>
 	{/snippet}
 </Modal>

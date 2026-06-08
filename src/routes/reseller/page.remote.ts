@@ -22,6 +22,7 @@ import {
 	getAuthenticatedReseller,
 	getResellerDashboardState,
 	addQuotaToResellerRequest,
+	deleteResellerRequest,
 	rechargeResellerRequest,
 	resetSubResellerPassword,
 	reviewSubResellerCreditRequest,
@@ -644,6 +645,35 @@ export const addQuotaCommand = command(
 		} catch (error) {
 			return {
 				addQuotaError: error instanceof Error ? error.message : 'افزایش حجم انجام نشد.'
+			};
+		}
+	}
+);
+
+export const deleteConfigCommand = command(
+	z.object({
+		id: z.number().int().positive()
+	}),
+	async ({ id }) => {
+		const reseller = await requireReseller();
+
+		if (!reseller) {
+			return {
+				deleteConfigError: 'نشست شما منقضی شده است. دوباره وارد شوید.'
+			};
+		}
+
+		try {
+			checkActionRateLimit('delete-config', reseller.id);
+			await deleteResellerRequest(reseller.id, id);
+			await getResellerState().set(await buildState());
+
+			return {
+				deleteConfigSuccess: 'کانفیگ از لیست حذف شد.'
+			};
+		} catch (error) {
+			return {
+				deleteConfigError: error instanceof Error ? error.message : 'حذف کانفیگ انجام نشد.'
 			};
 		}
 	}

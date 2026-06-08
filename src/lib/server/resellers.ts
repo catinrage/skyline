@@ -4739,6 +4739,26 @@ export async function revokeResellerRequest(
 	await refundGbLedgerForRequest(resellerId, requestId);
 }
 
+export async function deleteResellerRequest(resellerId: number, requestId: number) {
+	await ensureResellerTables();
+	const request = await getRequestById(requestId);
+
+	if (!request || request.resellerId !== resellerId) {
+		resellerLogger.warn('Blocked reseller delete ownership mismatch.', { resellerId, requestId });
+		throw new Error('درخواست موردنظر پیدا نشد.');
+	}
+
+	if (!request.revokedAt) {
+		throw new Error('فقط کانفیگ‌های لغوشده را می‌توان از لیست حذف کرد.');
+	}
+
+	await run('DELETE FROM reseller_charges WHERE reseller_id = ? AND request_id = ?', [resellerId, requestId]);
+	await run('DELETE FROM reseller_gb_ledger WHERE reseller_id = ? AND request_id = ?', [resellerId, requestId]);
+	await run('DELETE FROM reseller_requests WHERE id = ? AND reseller_id = ?', [requestId, resellerId]);
+
+	resellerLogger.info('Reseller deleted revoked request.', { resellerId, requestId });
+}
+
 export async function setResellerRequestEnabled(
 	resellerId: number,
 	requestId: number,
