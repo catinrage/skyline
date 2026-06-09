@@ -1293,12 +1293,14 @@
 		}
 
 		.command-backdrop {
-			place-items: end center;
-			padding: 0.75rem;
+			place-items: start center;
+			padding: 10vh 0.75rem 10vh;
 		}
 
 		.command-palette {
 			border-radius: 0.8rem;
+			max-height: 80vh;
+			overflow-y: auto;
 		}
 
 		.command-hint {
@@ -1309,6 +1311,10 @@
 		.command-search-row {
 			gap: 0.55rem;
 			padding: 0.75rem;
+		}
+
+		.command-list {
+			max-height: none;
 		}
 	}
 </style>
