@@ -214,6 +214,10 @@
 		padding: 14px 18px;
 	}
 
+	.session-row button {
+		flex-shrink: 0;
+	}
+
 	.session-list {
 		display: grid;
 		border-top: 1px solid var(--va-border);
@@ -230,6 +234,12 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 		direction: ltr;
+	}
+
+	@media (max-width: 640px) {
+		.session-info .session-title {
+			max-width: 160px;
+		}
 	}
 
 	.session-icon {
