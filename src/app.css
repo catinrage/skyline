@@ -1086,7 +1086,7 @@ button:not(:disabled):hover {
 .va-inspector-title {
 	margin: 0;
 	color: var(--va-text);
-	font: 500 13px var(--va-font-mono);
+	font: 500 13px var(--va-font-fa);
 }
 
 .va-inspector-sub {
@@ -1100,7 +1100,7 @@ button:not(:disabled):hover {
 	gap: 18px;
 	padding: 0 18px;
 	border-bottom: 1px solid var(--va-border);
-	font: 500 12px var(--va-font-mono);
+	font: 500 12px var(--va-font-fa);
 }
 
 .va-inspector-tab {
@@ -1260,9 +1260,8 @@ button:not(:disabled):hover {
 .va-section-label {
 	margin-bottom: 8px;
 	color: var(--va-text-faint);
-	font: 500 10.5px var(--va-font-mono);
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
+	font: 600 10px var(--va-font-fa);
+	letter-spacing: 0.03em;
 }
 
 .va-card {
@@ -1372,7 +1371,7 @@ button:not(:disabled):hover {
 	align-items: center;
 	justify-content: space-between;
 	color: var(--va-text-faint);
-	font: 500 11.5px var(--va-font-mono);
+	font: 500 11.5px var(--va-font-fa);
 }
 
 /* RTL: prev = pointing right, next = pointing left */

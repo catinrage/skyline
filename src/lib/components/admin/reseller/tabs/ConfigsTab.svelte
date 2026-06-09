@@ -1461,6 +1461,18 @@
 </Modal>
 
 <style>
+	.configs-va {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	/* Tab bar inside the mobile details modal: extend border to modal edges */
+	.mobile-details-stack .va-inspector-tabs {
+		margin-inline: -20px;
+		padding-inline: 20px;
+	}
+
 	.align-left {
 		text-align: left !important;
 	}
@@ -1829,7 +1841,7 @@
 	.field-hint {
 		margin-top: 6px;
 		color: var(--va-text-faint);
-		font: 500 11px var(--va-font-mono);
+		font: 500 11px var(--va-font-fa);
 	}
 
 	.identifier-list {
@@ -1901,7 +1913,7 @@
 
 	.plan-current strong {
 		color: var(--va-text-faint);
-		font: 500 11px var(--va-font-mono);
+		font: 500 11px var(--va-font-fa);
 		text-align: left;
 	}
 
